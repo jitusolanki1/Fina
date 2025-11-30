@@ -1,69 +1,125 @@
-import React, { useState } from 'react';
-import { Box } from 'lucide-react';
-import toast from 'react-hot-toast';
+import React, { useState } from "react";
+import { Apple, Chrome, Facebook, Box } from "lucide-react";
+import toast from "react-hot-toast";
+import { useAuth } from "../../auth/AuthProvider";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 
-export default function Login(){
-  const [email, setEmail] = useState('m@example.com');
-  const [password, setPassword] = useState('');
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  function submit(e){
+  async function submit(e) {
     e.preventDefault();
-    if(!email) return toast.error('Email required');
-    // demo behaviour
-    toast.success('Logged in (demo)');
+    if (!email) return toast.error("Email required");
+
+    const res = await login(email, password);
+
+    if (res?.ok) {
+      toast.success("Logged in");
+      const dest = location.state?.from?.pathname || "/";
+      navigate(dest, { replace: true });
+    } else {
+      toast.error("Login failed");
+    }
   }
 
   return (
-    <div className="auth-shell">
-      <div className="auth-card">
-        <div className="auth-left">
-          <div style={{maxWidth:420}}>
-            <div className="auth-title">Welcome back</div>
-            <div className="auth-sub">Login to your Acme Inc account</div>
+    <div className="min-h-screen w-full bg-black text-white relative overflow-hidden">
+      {/* Background overlay */}
+      <div className="absolute inset-0 bg-black opacity-70"></div>
 
-            <form onSubmit={submit} className="mt-6 space-y-4">
+      {/* LEFT CORNER GRID ANIMATION */}
+      <div className="animated-grid"></div>
+
+      {/* Floating light orbs */}
+      <div className="orb orb-1"></div>
+      <div className="orb orb-2"></div>
+
+      <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-xl w-full max-w-xl overflow-hidden">
+          <div className="w-full p-10 flex flex-col justify-center items-center">
+            <h1 className="text-3xl font-semibold">Welcome back</h1>
+            <p className="text-slate-400 mt-1">Login to your account</p>
+
+            <form onSubmit={submit} className="mt-8 space-y-6 w-full">
+              {/* Email */}
               <div>
                 <label className="text-sm text-slate-300">Email</label>
-                <input className="auth-input mt-1" value={email} onChange={e=>setEmail(e.target.value)} />
+                <input
+                  className="w-full mt-1 p-3 rounded-md text-white
+                  bg-black/40 border border-white/10 
+                  focus:border-purple-500 focus:ring-purple-500 outline-none"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  autoComplete="email"
+                />
               </div>
 
+              {/* Password */}
               <div>
-                <div className="flex justify-between items-center">
-                  <label className="text-sm text-slate-300">Password</label>
-                  <a className="text-sm text-slate-400" href="#">Forgot your password?</a>
-                </div>
-                <input type="password" className="auth-input mt-1" value={password} onChange={e=>setPassword(e.target.value)} />
+                <label className="text-sm text-slate-300">Password</label>
+                <input
+                  type="password"
+                  className="w-full mt-1 p-3 rounded-md text-white
+                  bg-black/40 border border-white/10 
+                  focus:border-purple-500 focus:ring-purple-500 outline-none"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                />
+
+                <Link
+                  className="text-sm text-slate-400 hover:text-purple-300 mt-1 inline-block"
+                  to="#"
+                >
+                  Forgot your password?
+                </Link>
               </div>
 
-              <div>
-                <button className="auth-btn" type="submit">Login</button>
-              </div>
+              {/* Submit */}
+              <button
+                className="w-full py-3 rounded-md bg-purple-600 hover:bg-purple-700 
+                transition shadow-lg hover:shadow-purple-700/40 font-medium"
+              >
+                Login
+              </button>
 
+              {/* Divider */}
               <div className="flex items-center gap-4">
-                <hr className="flex-1 border-t border-[#1f2937]" />
-                <div className="text-sm text-slate-400">Or continue with</div>
-                <hr className="flex-1 border-t border-[#1f2937]" />
+                <hr className="flex-1 border-slate-700" />
+                <span className="text-slate-400">Or continue with</span>
+                <hr className="flex-1 border-slate-700" />
               </div>
 
-              <div className="social-row">
-                <button type="button" className="social-btn"></button>
-                <button type="button" className="social-btn">G</button>
-                <button type="button" className="social-btn"></button>
+              {/* Social Buttons */}
+              <div className="flex gap-4 justify-center">
+                <button type="button" className="social-btn">
+                  <Apple size={22} />
+                </button>
+                <button type="button" className="social-btn">
+                  <Chrome size={22} />
+                </button>
+                <button type="button" className="social-btn">
+                  <Facebook size={22} />
+                </button>
               </div>
 
-              <div className="auth-footer">Don't have an account? <a className="text-slate-200" href="#">Sign up</a></div>
+              {/* Footer */}
+              <div className="text-sm text-center text-slate-400">
+                Don't have an account?{" "}
+                <Link
+                  className="text-purple-300 hover:text-purple-200"
+                  to="/register"
+                >
+                  Sign up
+                </Link>
+              </div>
             </form>
-
-            <div style={{marginTop:18, fontSize:12, color:'#9aa4b6'}}>
-              By clicking continue, you agree to our <a className="text-slate-200" href="#">Terms of Service</a> and <a className="text-slate-200" href="#">Privacy Policy</a>.
-            </div>
-          </div>
-        </div>
-        <div className="auth-right">
-          <div style={{width:'80%', height:'70%', borderRadius:12, background:'#0b0b0b', display:'flex', alignItems:'center', justifyContent:'center', color:'#151515'}}>
-              <div style={{textAlign:'center', opacity:0.06}}>
-              <Box size={72} />
-            </div>
           </div>
         </div>
       </div>

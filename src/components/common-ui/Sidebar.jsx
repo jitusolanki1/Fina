@@ -18,8 +18,8 @@ import {
   LogOut,
 } from "lucide-react";
 import React from "react";
-
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../auth/AuthProvider";
 import avatar from "../../assets/avatar.jpeg";
 
 export default function Sidebar({
@@ -198,7 +198,9 @@ export default function Sidebar({
             <NavLink
               to="/search"
               title="Search"
-              className={({ isActive }) => (isActive ? "nav-item active" : "nav-item")}
+              className={({ isActive }) =>
+                isActive ? "nav-item active" : "nav-item"
+              }
               onClick={onClose}
             >
               <Search className="nav-icon" />
@@ -245,13 +247,30 @@ export default function Sidebar({
               style={{ display: "flex", alignItems: "center", gap: 8 }}
               className="nav-icon"
             >
-              <button className="page-btn">
-                <LogOut size={16} />
-              </button>
+              <SignOutButton onClose={onClose} />
             </div>
           </div>
         </div>
       </div>
     </aside>
+  );
+}
+
+function SignOutButton({ onClose }) {
+  const { logout } = useAuth() || {};
+  const navigate = useNavigate();
+
+  function handleSignOut() {
+    try {
+      logout && logout();
+    } catch (e) {}
+    onClose && onClose();
+    navigate("/login", { replace: true });
+  }
+
+  return (
+    <button aria-label="Sign out" className="page-btn" onClick={handleSignOut}>
+      <LogOut size={16} />
+    </button>
   );
 }

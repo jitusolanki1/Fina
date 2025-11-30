@@ -1,8 +1,10 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import CommandPalette from "./components/CommandPalette";
+import ProtectedRoute from "./auth/ProtectedRoute";
 import Header from "./components/common-ui/Header";
 import Sidebar from "./components/common-ui/Sidebar";
+import { useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import "./index.css";
 
@@ -16,6 +18,7 @@ const AccountDetail = lazy(() => import("./components/account/AccountDetail"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const SummariesPage = lazy(() => import("./pages/Summaries"));
 const LoginPage = lazy(() => import("./components/auth/Login"));
+const RegisterPage = lazy(() => import("./components/auth/Register"));
 const MailsPage = lazy(() => import("./components/campagin/Tamplates"));
 const TeamPage = lazy(() => import("./pages/Team"));
 const Projects = lazy(() => import("./pages/Projects"));
@@ -32,6 +35,9 @@ function AppRoutes({
   sidebarCollapsed,
   onToggleCollapse,
 }) {
+  const location = useLocation();
+  const authPaths = ["/login", "/register"];
+  const isAuthRoute = authPaths.includes(location.pathname);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState("open");
   const lastCtrlITimeRef = useRef(0);
@@ -72,6 +78,143 @@ function AppRoutes({
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
+  // build routes element once so we can render it in both auth and main layouts
+  const routesElement = (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/accounts"
+          element={
+            <ProtectedRoute>
+              <AccountsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/:id"
+          element={
+            <ProtectedRoute>
+              <AccountPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/summaries"
+          element={
+            <ProtectedRoute>
+              <SummariesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <ProtectedRoute>
+              <Projects />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <ProtectedRoute>
+              <Documents />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/data-library"
+          element={
+            <ProtectedRoute>
+              <DataLibrary />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <Reports />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/search"
+          element={
+            <ProtectedRoute>
+              <SearchPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/word-assistant"
+          element={
+            <ProtectedRoute>
+              <WordAssistant />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/help"
+          element={
+            <ProtectedRoute>
+              <HelpPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* <Route path="/projects" element={<AccountList />} /> */}
+        {/* <Route path="/account-create" element={<AccountDetail />} /> */}
+        {/* <Route path="/projects" element={<AccountSheet />} /> */}
+        <Route
+          path="/account-create"
+          element={
+            <ProtectedRoute>
+              <AccountForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/messages"
+          element={
+            <ProtectedRoute>
+              <MailsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/team"
+          element={
+            <ProtectedRoute>
+              <TeamPage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </Suspense>
+  );
+
+  if (isAuthRoute) {
+    return <main>{routesElement}</main>;
+  }
+
   return (
     <>
       <CommandPalette
@@ -97,35 +240,18 @@ function AppRoutes({
       )}
       <main className="fixed sidebar-scroll h-full top-0 transition-all pt-20 left-0 right-0 p-10">
         <div className={sidebarCollapsed ? "md:ml-16" : "md:ml-64"}>
-          <div className=" mx-auto p-4">
-            <Suspense fallback={<div>Loading...</div>}>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/accounts" element={<AccountsPage />} />
-                <Route path="/account/:id" element={<AccountPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/summaries" element={<SummariesPage />} />
-                <Route path="/projects" element={<Projects />} />
-                <Route path="/documents" element={<Documents />} />
-                <Route path="/data-library" element={<DataLibrary />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/search" element={<SearchPage />} />
-                <Route path="/word-assistant" element={<WordAssistant />} />
-                <Route path="/help" element={<HelpPage />} />
-                {/* <Route path="/projects" element={<AccountList />} /> */}
-                {/* <Route path="/account-create" element={<AccountDetail />} /> */}
-                {/* <Route path="/projects" element={<AccountSheet />} /> */}
-                <Route path="/account-create" element={<AccountForm />} />
-                <Route path="/messages" element={<MailsPage />} />
-                <Route path="/team" element={<TeamPage />} />
-              </Routes>
-            </Suspense>
-          </div>
+          <div className=" mx-auto p-4">{routesElement}</div>
         </div>
       </main>
     </>
   );
+}
+
+function HeaderWrapper(props) {
+  const location = useLocation();
+  const authPaths = ["/login", "/register"];
+  if (authPaths.includes(location.pathname)) return null;
+  return <Header {...props} />;
 }
 
 export default function App() {
@@ -135,7 +261,7 @@ export default function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-[#0A0A0A] text-slate-200">
         <Toaster />
-        <Header
+        <HeaderWrapper
           onToggleSidebar={() => setSidebarOpen((s) => !s)}
           onToggleCollapse={() => setSidebarCollapsed((s) => !s)}
           sidebarOpen={sidebarOpen}
