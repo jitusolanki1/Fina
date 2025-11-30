@@ -1,0 +1,45 @@
+{
+  "name": "Fina",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Fina - simple bank dashboard (React + json-server)",
+  "author": "",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "json-server": "json-server --watch db.json --port 3001",
+    "start:all": "echo Run `npm run dev` and in another terminal `npm run json-server`",
+    "start": "concurrently \"npm run dev\" \"npm run json-server\""
+  },
+  "dependencies": {
+    "@lexical/react": "^0.38.2",
+    "@tailwindcss/vite": "^4.1.17",
+    "axios": "^1.4.0",
+    "json-server": "^1.0.0-beta.3",
+    "lexical": "^0.38.2",
+    "lucide-react": "^0.554.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-hot-toast": "^2.5.0",
+    "react-router-dom": "^6.14.1",
+    "recharts": "^2.15.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react-swc": "^4.2.1",
+    "autoprefixer": "^10.4.14",
+    "concurrently": "^7.6.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "vite": "^7.2.2"
+  }
+}

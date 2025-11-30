@@ -1,0 +1,883 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global background and table tweaks to match #0A0A0A theme */
+:root {
+    --app-bg: #0A0A0A;
+    --card-bg: #0F0F0F;
+    --muted: #94a3b8;
+    --border: #1f2937;
+}
+
+body {
+    background: var(--app-bg);
+    color: #e6eef8;
+}
+
+.table-dark thead th {
+    background: var(--app-bg);
+    color: #e6eef8;
+    border-bottom: 1px solid var(--border);
+}
+
+.table-dark tbody tr:nth-child(even) {
+    background: #07070733;
+    /* subtle zebra */
+}
+
+.card-dark {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+}
+
+/* Table card that matches the screenshot: rounded, padded, full-width container */
+.table-card {
+    background: var(--app-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.table-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.chips {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.chip {
+    padding: 6px 10px;
+    background: #121212;
+    border-radius: 8px;
+    color: #cbd5e1;
+    font-size: 13px;
+    border: 1px solid #151515;
+}
+
+.controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    max-width: 100%;
+    /* allow horizontal scroll on very small viewports */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.control-btn {
+    padding: 6px 10px;
+    background: #0f0f10;
+    border: 1px solid var(--border);
+    color: #e6eef8;
+    border-radius: 8px;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.table-wrap {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.table-dark thead th {
+    padding: 12px 14px;
+    font-weight: 600;
+}
+
+.table-dark tbody td {
+    padding: 14px;
+}
+
+.drag-handle {
+    width: 18px;
+    color: #6b7280;
+    cursor: grab;
+}
+
+.row-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #2563eb;
+}
+
+.pill {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #0F0F0F;
+    border: 1px solid #1f2937;
+    color: #cbd5e1;
+    font-size: 12px;
+}
+
+.status-badge {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #0F0F0F;
+    border: 1px solid #1f2937;
+    color: #cbd5e1;
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    display: inline-block;
+}
+
+.table-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 12px;
+    color: #9aa4b6;
+}
+
+.pager {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.page-btn {
+    background: #0F0F0F;
+    border: 1px solid var(--border);
+    color: #cbd5e1;
+    padding: 6px 8px;
+    border-radius: 6px;
+}
+
+/* Metric cards (top KPI cards) */
+.metric-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .metric-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+.metric-card {
+    background: linear-gradient(180deg, rgba(20, 20, 20, 0.6), rgba(15, 15, 15, 0.6));
+    border: 1px solid var(--border);
+    padding: 18px;
+    border-radius: 12px;
+    position: relative;
+}
+
+.metric-card h3 {
+    margin: 0;
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.metric-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 8px;
+}
+
+.metric-sub {
+    color: #9aa4b6;
+    margin-top: 10px;
+    font-size: 13px;
+}
+
+.metric-badge {
+    position: absolute;
+    right: 14px;
+    top: 14px;
+    background: #0F0F0F;
+    border: 1px solid var(--border);
+    color: #e6eef8;
+    padding: 6px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Chart card controls */
+.chart-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 18px;
+    border-radius: 12px;
+}
+
+/* Account sheet container: center the ledger card and keep a comfortable max width */
+.account-sheet {
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.account-sheet .card-dark {
+    padding: 18px;
+}
+
+.account-sheet .table-wrap {
+    margin-top: 12px;
+}
+
+/* Improved account sheet visuals */
+.account-sheet .card-dark {
+    background: linear-gradient(180deg, rgba(8,8,8,0.8), rgba(12,12,12,0.85));
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+
+.account-sheet .add-form {
+    background: rgba(255,255,255,0.01);
+    border: 1px solid rgba(255,255,255,0.03);
+    padding: 12px;
+    border-radius: 10px;
+}
+
+.account-sheet .add-form input {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.04);
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.account-sheet .add-form .btn-primary {
+    background: linear-gradient(90deg,#1f6feb,#2563eb);
+    border: none;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 8px;
+}
+
+/* Table styling improvements */
+.account-sheet .table-wrap {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+
+.account-sheet table thead th {
+    background: linear-gradient(180deg, rgba(10,10,10,0.9), rgba(12,12,12,0.95));
+    color: #e6eef8;
+    font-weight: 700;
+    padding: 12px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.account-sheet table tbody tr:hover {
+    background: rgba(255,255,255,0.02);
+}
+
+.account-sheet table td,
+.account-sheet table th {
+    vertical-align: middle;
+}
+
+/* Right-align numeric columns and use monospaced font for better readability */
+.account-sheet .num-col {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, 'Roboto Mono', 'Courier New', monospace;
+    padding-right: 18px;
+}
+
+.account-sheet .balance-cell {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.account-sheet .archived-label {
+    font-size: 12px;
+    color: #9aa4b6;
+}
+
+/* Center table contents in the account sheet for cleaner alignment */
+.account-sheet table th,
+.account-sheet table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.account-sheet table thead th {
+    text-align: center;
+}
+
+.account-sheet td .flex.items-center.justify-end {
+    justify-content: center;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.range-btn {
+    background: #0F0F0F;
+    border: 1px solid var(--border);
+    color: #e6eef8;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.range-btn.active {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+    border-color: #2b3036;
+}
+
+/* Sidebar styles to match second image: wider, iconized, quick-create pill, avatar area */
+.sidebar {
+    width: 256px; /* match md:ml-64 (16rem) so content doesn't overlap */
+    background: var(--app-bg);
+    border-right: 1px solid var(--border);
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+.sidebar .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 8px;
+}
+
+.sidebar .logo-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Hide native scrollbar visually but keep scrolling accessible */
+.sidebar-scroll {
+    overflow-y: auto;
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+}
+.sidebar-scroll::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+/* Collapsed / mini sidebar (desktop) */
+.sidebar.collapsed {
+    width: 64px;
+}
+.sidebar.collapsed .sidebar-label {
+    display: none;
+}
+/* Tooltip for collapsed sidebar */
+.sidebar.collapsed .nav-item[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    left: 64px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(20,20,20,0.95);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+    font-size: 12px;
+    z-index: 60;
+}
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+}
+.sidebar.collapsed .brand {
+    justify-content: center;
+}
+.sidebar.collapsed .quick-create {
+    padding: 8px;
+}
+.sidebar {
+    transition: width 180ms ease, transform 180ms ease;
+}
+
+/* Collapse handle button (desktop) */
+.sidebar {
+    position: relative;
+}
+.collapse-handle {
+    position: absolute;
+    top: 12px;
+    right: -12px;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #e6eef8;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+.collapse-handle:hover {
+    background: #151515;
+}
+
+.sidebar .quick-create {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f3f4f6;
+    color: #0b0b0b;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.sidebar .mail-btn {
+    width: 36px;
+    height: 36px;
+    background: #0F0F0F;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e6eef8;
+}
+
+/* quick-create refinement to match screenshot: subtle shadow, pill with icon on left */
+.sidebar .quick-create {
+    background: #f3f4f6;
+    color: #0b0b0b;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+}
+
+.sidebar .quick-create svg {
+    background: transparent;
+    border-radius: 999px;
+}
+
+/* active nav pill closer to screenshot */
+.nav-item.active {
+    background: #475569;
+    color: #fff;
+}
+
+.nav-item.active .nav-icon {
+    color: #fff;
+}
+
+/* Additional small entries above avatar (settings/help/search) */
+.utility-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+}
+
+.utility-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    color: #cbd5e1;
+}
+
+.utility-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #e6eef8;
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.nav-item.active {
+    background: #374151;
+    color: #fff;
+}
+
+.nav-icon {
+    color: #9aa4b6;
+    font-weight: 600;
+}
+.sidebar .nav-icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* Ensure sidebar icons render at a consistent, readable size.
+   lucide-react renders SVGs; set explicit width/height so they don't
+   appear very small when the sidebar collapses. */
+.sidebar .nav-icon svg,
+.sidebar .mail-btn svg,
+.sidebar .quick-create svg,
+.sidebar .collapse-handle svg,
+.sidebar .avatar svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Slightly larger icons when sidebar is collapsed to improve visibility */
+.sidebar.collapsed .nav-icon svg,
+.sidebar.collapsed .mail-btn svg,
+.sidebar.collapsed .quick-create svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* Reduce gap that can push icons visually smaller when collapsed */
+.sidebar.collapsed .nav-item {
+    gap: 0;
+    padding: 10px 0;
+}
+
+.sidebar .section-title {
+    padding: 6px 6px;
+    color: #9aa4b6;
+    font-size: 12px;
+}
+
+.sidebar .avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 12px;
+}
+
+.sidebar .avatar {
+    width: 44px;
+    height: 44px;          /* IMPORTANT: ये जरूरी है */
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.sidebar .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;       /* गोल में सही crop */
+    object-position: center; /* बीच का हिस्सा दिखेगा */
+}
+
+
+.sidebar .user-name {
+    font-weight: 600;
+    color: #e6eef8;
+}
+
+.sidebar .user-email {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* Settings panel layout */
+.settings-panel {
+    display: flex;
+    gap: 20px;
+}
+
+.settings-nav {
+    width: 260px;
+    border-right: 1px solid var(--border);
+    padding: 18px;
+    background: #0f0f10;
+    border-radius: 12px;
+}
+
+.settings-nav .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #cbd5e1;
+}
+
+.settings-nav .nav-link.active {
+    background: rgba(255, 255, 255, 0.02);
+    color: #fff;
+}
+
+.settings-nav .nav-link:hover {
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.settings-content {
+    flex: 1;
+    padding: 18px;
+}
+
+.settings-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    min-height: 140px;
+}
+
+.settings-breadcrumb {
+    color: #9aa4b6;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
+.settings-right-scroll {
+    max-height: calc(100vh - 160px);
+    overflow: auto;
+    padding-right: 8px;
+}
+
+/* Auth / Login styles */
+.auth-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 980px;
+    display: flex;
+    gap: 0;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.auth-left {
+    flex: 1;
+    background: #0b0b0b;
+    padding: 36px;
+}
+
+.auth-right {
+    flex: 1;
+    background: #161616;
+    min-height: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.auth-sub {
+    color: #9aa4b6;
+    margin-top: 6px;
+}
+
+.auth-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #0A0A0A;
+    border: 1px solid var(--border);
+    color: #e6eef8;
+}
+
+.auth-btn {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #e6e6e6;
+    color: #0a0a0a;
+    font-weight: 600;
+}
+
+.social-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+}
+
+.social-btn {
+    width: 80px;
+    height: 44px;
+    border-radius: 8px;
+    background: #0f0f0f;
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e6eef8;
+}
+
+.auth-footer {
+    text-align: center;
+    color: #9aa4b6;
+    margin-top: 12px;
+}
+
+/* Templates page styles */
+.templates-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+}
+.template-list {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.template-item {
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #e6eef8;
+}
+.template-item:hover { background: rgba(255,255,255,0.02); }
+.template-selected { background: rgba(99,102,241,0.12); border-left: 3px solid #7c3aed; }
+.template-list-footer { margin-top: auto; }
+.primary-btn {
+    background: linear-gradient(90deg,#7c3aed,#6d28d9);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+}
+
+/* Right panel form */
+.templates-right {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+}
+
+/* Quill dark overrides */
+.ql-toolbar.ql-snow {
+    background: #0b0b0b;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    color: #e6eef8;
+}
+.ql-container.ql-snow {
+    background: #080808;
+    color: #e6eef8;
+    border: 1px solid var(--border);
+    min-height: 180px;
+}
+.ql-editor p { color: #e6eef8; }
+
+/* Personalization dropdown inside editor */
+.personalize-box {
+    position: absolute;
+    left: 24px;
+    bottom: 80px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    padding: 8px;
+    border-radius: 8px;
+    color: #e6eef8;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+}
+
+/* Lexical editor toolbar (bottom) and personalization dropdown */
+.editor-shell { position: relative; padding: 12px; padding-bottom: 72px; }
+.editor-shell .editor-input { min-height: 180px; padding: 12px; color: #e6eef8; background: transparent; border-radius: 6px; outline: none; }
+.editor-toolbar { position: absolute; left: 12px; right: 12px; bottom: 12px; display:flex; align-items:center; gap:8px; z-index:20; }
+.editor-toolbar .control-btn {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.04);
+    color: #e6eef8;
+    padding: 8px 10px;
+    border-radius: 8px;
+    min-width: 36px;
+    height: 36px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+}
+.editor-toolbar .control-btn.primary-btn { padding: 8px 14px; min-width: auto; }
+.personalization-dropdown { position: absolute; left: 12px; bottom: 56px; width: 200px; background: var(--card-bg); border: 1px solid var(--border); padding: 10px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6); z-index:30; }
+.personalization-dropdown label { display:block; color:#e6eef8; margin-bottom:8px; }
+.personalization-dropdown input { margin-right:8px; }
+.personalization-dropdown .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:8px; }
+
+/* smaller button look to match screenshot */
+.editor-toolbar .control-btn.small { padding:6px 8px; height:34px; min-width:34px; }
+
+/* Responsive header and table tweaks */
+@media (max-width: 768px) {
+    .table-header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .chips {
+        width: 100%;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 6px;
+    }
+
+    .controls {
+        width: 100%;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .control-btn {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    .table-wrap {
+        overflow-x: auto;
+    }
+
+    .table-dark tbody td {
+        padding: 10px;
+    }
+}
