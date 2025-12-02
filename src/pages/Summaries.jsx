@@ -10,6 +10,7 @@ import {
   createSummaryRange,
   undoSummary,
 } from "../utils/summaries";
+import { sendSummaryViaFormspree } from "../utils/sendSummaryForm";
 import toast from "react-hot-toast";
 import SummaryDetail from "../components/SummaryDetail";
 import api from "../api";
@@ -138,11 +139,32 @@ export default function Summaries() {
               onClick={async () => {
                 const target = dateDaysAgo(0);
                 try {
-                  await toast.promise(createSummaryRange(target, target), {
-                    loading: `Creating summary for ${target}`,
-                    success: "Summary created",
-                    error: "Failed to create",
-                  });
+                  const saved = await toast.promise(
+                    createSummaryRange(target, target),
+                    {
+                      loading: `Creating summary for ${target}`,
+                      success: "Summary created",
+                      error: "Failed to create",
+                    }
+                  );
+
+                  try {
+                    await toast.promise(
+                      sendSummaryViaFormspree(
+                        saved,
+                        "https://formspree.io/f/meoyegdl"
+                      ),
+                      {
+                        loading: "Sending summary...",
+                        success: "Summary sent",
+                        error: "Failed to send",
+                      }
+                    );
+                  } catch (err) {
+                    console.error("send failed", err);
+                    toast.error("Could not send summary");
+                  }
+
                   setTimeout(load, 800);
                 } catch (err) {
                   console.error(err);
@@ -158,11 +180,32 @@ export default function Summaries() {
                 const start = dateDaysAgo(2);
                 const end = dateDaysAgo(1);
                 try {
-                  await toast.promise(createSummaryRange(start, end), {
-                    loading: `Creating summary ${start} → ${end}`,
-                    success: "Summary created",
-                    error: "Failed",
-                  });
+                  const saved = await toast.promise(
+                    createSummaryRange(start, end),
+                    {
+                      loading: `Creating summary ${start} → ${end}`,
+                      success: "Summary created",
+                      error: "Failed",
+                    }
+                  );
+
+                  try {
+                    await toast.promise(
+                      sendSummaryViaFormspree(
+                        saved,
+                        "https://formspree.io/f/meoyegdl"
+                      ),
+                      {
+                        loading: "Sending summary...",
+                        success: "Summary sent",
+                        error: "Failed to send",
+                      }
+                    );
+                  } catch (err) {
+                    console.error("send failed", err);
+                    toast.error("Could not send summary");
+                  }
+
                   setTimeout(load, 800);
                 } catch (err) {
                   console.error(err);
@@ -430,20 +473,28 @@ export default function Summaries() {
                     <div>No transactions matched the preview range.</div>
                     {previewData.txQuery && (
                       <div className="mt-2">
-                        Raw API query: <code className="text-xs">{previewData.txQuery}</code>
+                        Raw API query:{" "}
+                        <code className="text-xs">{previewData.txQuery}</code>
                         <button
                           className="ml-2 px-2 py-1 text-xs bg-slate-700 rounded"
-                          onClick={() => window.open(`http://localhost:3001${previewData.txQuery}`, "_blank")}
+                          onClick={() =>
+                            window.open(
+                              `http://localhost:3001${previewData.txQuery}`,
+                              "_blank"
+                            )
+                          }
                         >
                           Open API
                         </button>
                       </div>
                     )}
-                    {previewData.txSample && previewData.txSample.length > 0 && (
-                      <div className="mt-2 text-xs">
-                        Sample fetched IDs: {previewData.txSample.map(t=>t.id).join(", ")}
-                      </div>
-                    )}
+                    {previewData.txSample &&
+                      previewData.txSample.length > 0 && (
+                        <div className="mt-2 text-xs">
+                          Sample fetched IDs:{" "}
+                          {previewData.txSample.map((t) => t.id).join(", ")}
+                        </div>
+                      )}
                   </div>
                 )}
                 <SummaryDetail summary={previewData} />
@@ -464,7 +515,7 @@ export default function Summaries() {
                         );
                       }
                       try {
-                        await toast.promise(
+                        const saved = await toast.promise(
                           createSummaryRange(previewStart, previewEnd),
                           {
                             loading: "Creating summary...",
@@ -472,6 +523,24 @@ export default function Summaries() {
                             error: "Failed",
                           }
                         );
+
+                        try {
+                          await toast.promise(
+                            sendSummaryViaFormspree(
+                              saved,
+                              "https://formspree.io/f/meoyegdl"
+                            ),
+                            {
+                              loading: "Sending summary...",
+                              success: "Summary sent",
+                              error: "Failed to send",
+                            }
+                          );
+                        } catch (err) {
+                          console.error("send failed", err);
+                          toast.error("Could not send summary");
+                        }
+
                         setPreviewOpen(false);
                         setTimeout(load, 800);
                       } catch (err) {

@@ -1,5 +1,15 @@
 import React, { useState } from "react";
-import { Menu, X, Sun, Moon, ChevronLeft, ChevronRight, Bell, Search } from "lucide-react";
+import {
+  Menu,
+  X,
+  Sun,
+  Moon,
+  ChevronLeft,
+  ChevronRight,
+  Bell,
+  Search,
+} from "lucide-react";
+import NotificationDrawer from "./NotificationDrawer";
 import { Link } from "react-router-dom";
 
 export default function Header({
@@ -9,6 +19,7 @@ export default function Header({
   collapsed,
 }) {
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [notifOpen, setNotifOpen] = useState(false);
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle("dark");
@@ -32,21 +43,32 @@ export default function Header({
             <div className="text-lg font-semibold">Fina</div>
           </div>
           <div className="flex items-center gap-3">
-            <Link to="/search" className="p-2 rounded hover:bg-slate-800/40" title="Search">
+            <Link
+              to="/search"
+              className="p-2 rounded hover:bg-slate-800/40"
+              title="Search"
+            >
               <Search size={16} />
             </Link>
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded hover:bg-slate-800/40"
-            >
-              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
             <div className="hidden sm:block text-sm text-slate-300">
-             <Bell size={16} />
+              <button
+                onClick={() => setNotifOpen(true)}
+                className="relative p-2 rounded hover:bg-slate-800/40"
+                aria-label="Open notifications"
+              >
+                <Bell size={16} />
+                <span className="absolute -top-0.5 -right-0.5 inline-flex h-3 w-3 items-center justify-center rounded-full bg-rose-500 text-white text-[10px]">
+                  3
+                </span>
+              </button>
             </div>
           </div>
         </div>
       </div>
+      <NotificationDrawer
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+      />
     </header>
   );
 }
