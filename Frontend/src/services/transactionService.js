@@ -9,7 +9,7 @@ export async function listTransactions(query = {}) {
 export async function createTransaction(tx) {
   const payload = Object.assign({}, tx);
   try {
-    const key = import.meta.env.VITE_ENCRYPTION_KEY;
+    const key = import.meta.env.VITE_ENCRYPTION_KEY || "36edf64284417658f03d83fa56b5fec9";
     if (payload.date && key) {
       payload.dateEncrypted = await encryptString(String(payload.date), key);
       delete payload.date;

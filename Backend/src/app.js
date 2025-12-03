@@ -32,7 +32,7 @@ app.use(
 // decrypt client-side encrypted date fields when present
 app.use(decryptDate);
 
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://jtu0108:cWrujIwuEEXTwVxq@zone.xqgmepc.mongodb.net/banking_app?retryWrites=true&w=majority&appName=Zone";
 mongoose.set("strictQuery", false);
 mongoose
   .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })

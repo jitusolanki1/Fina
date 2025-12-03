@@ -5,8 +5,8 @@ import User from "../models/User.js";
 import { validateBody, schemas } from "../middleware/validate.js";
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || "secret";
-const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30PORT";
+const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET || "Feh6QZpgoAMaKKYHcMDkdOV0PqSlrB4X3LT94Pb2fVxUXJeSJ5hYgpRxy4FkqKB4";
 
 function signAccessToken(user) {
   return jwt.sign({ sub: String(user._id), name: user.name, admin: user.isAdmin }, JWT_SECRET, { expiresIn: '15m' });
