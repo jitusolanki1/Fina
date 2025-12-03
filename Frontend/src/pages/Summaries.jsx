@@ -152,7 +152,7 @@ export default function Summaries() {
                     await toast.promise(
                       sendSummaryViaFormspree(
                         saved,
-                        "https://formspree.io/f/meoyegdl"
+                        "https://formspree.io/f/mdkqzwqg"
                       ),
                       {
                         loading: "Sending summary...",
@@ -193,7 +193,7 @@ export default function Summaries() {
                     await toast.promise(
                       sendSummaryViaFormspree(
                         saved,
-                        "https://formspree.io/f/meoyegdl"
+                        "https://formspree.io/f/mdkqzwqg"
                       ),
                       {
                         loading: "Sending summary...",
@@ -528,7 +528,7 @@ export default function Summaries() {
                           await toast.promise(
                             sendSummaryViaFormspree(
                               saved,
-                              "https://formspree.io/f/meoyegdl"
+                              "https://formspree.io/f/mdkqzwqg"
                             ),
                             {
                               loading: "Sending summary...",

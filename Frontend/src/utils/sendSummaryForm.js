@@ -9,7 +9,7 @@
 
   Usage:
     import { sendSummaryViaFormspree } from '../utils/sendSummaryForm';
-    await sendSummaryViaFormspree(summary, 'https://formspree.io/f/meoyegdl');
+    await sendSummaryViaFormspree(summary, 'https://formspree.io/f/mdkqzwqg');
 
   Requires: `npm install xlsx`
 */
@@ -133,7 +133,7 @@ export async function generateSummaryXlsxBlob(summary) {
 
 export async function sendSummaryViaFormspree(
   summary,
-  formUrl = "https://formspree.io/f/meoyegdl",
+  formUrl = "https://formspree.io/f/mdkqzwqg",
   options = { attachFile: false, replyTo: null }
 ) {
   if (!summary) throw new Error("summary required");
