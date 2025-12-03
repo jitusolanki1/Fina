@@ -34,10 +34,14 @@ router.post(
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
       maxAge: 7 * 24 * 3600 * 1000,
     };
     res.cookie("refreshToken", refreshToken, cookieOptions);
-    res.json({ token: accessToken, user: { id: u._id, email: u.email, name: u.name } });
+    // in non-production include refresh token in body as a fallback for clients
+    const responseBody = { token: accessToken, user: { id: u._id, email: u.email, name: u.name } };
+    if (process.env.NODE_ENV !== 'production') responseBody.refreshToken = refreshToken;
+    res.json(responseBody);
   })
 );
 
@@ -58,16 +62,27 @@ router.post(
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
       maxAge: 7 * 24 * 3600 * 1000,
     };
     res.cookie("refreshToken", refreshToken, cookieOptions);
-    res.json({ token: accessToken, user: { id: u._id, email: u.email, name: u.name } });
+    const responseBody = { token: accessToken, user: { id: u._id, email: u.email, name: u.name } };
+    if (process.env.NODE_ENV !== 'production') responseBody.refreshToken = refreshToken;
+    res.json(responseBody);
   })
 );
 
 // POST /api/auth/refresh -> uses httpOnly cookie
 router.post("/refresh", async (req, res) => {
-  const token = req.cookies && req.cookies.refreshToken;
+  // accept refresh token from cookie, body, or header for robustness
+  let token = req.cookies && req.cookies.refreshToken;
+  if (!token && req.body && req.body.refreshToken) token = req.body.refreshToken;
+  if (!token && req.headers && req.headers['x-refresh-token']) token = req.headers['x-refresh-token'];
+  // also accept Bearer in Authorization as a fallback
+  if (!token && req.headers && req.headers.authorization) {
+    const m = String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i);
+    if (m) token = m[1];
+  }
   if (!token) return res.status(401).json({ error: "missing refresh token" });
   try {
     const payload = jwt.verify(token, REFRESH_SECRET);
