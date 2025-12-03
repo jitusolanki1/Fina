@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../api';
+import { listAccounts } from '../services/accountsService';
 
 export default function CommandPalette({ open, onClose, onSelect, mode = 'open' }){
   const [accounts, setAccounts] = useState([]);
@@ -9,7 +10,15 @@ export default function CommandPalette({ open, onClose, onSelect, mode = 'open' 
 
   useEffect(()=>{
     if(!open) return;
-    api.get('/accounts').then(r=>setAccounts(r.data)).catch(()=>setAccounts([]));
+    (async () => {
+      try {
+        const a = await listAccounts();
+        setAccounts(a || []);
+      } catch (err) {
+        console.error('Could not load accounts', err);
+        setAccounts([]);
+      }
+    })();
     setQuery('');
     setSelected(0);
     setTimeout(()=> inputRef.current && inputRef.current.focus(), 50);

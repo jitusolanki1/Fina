@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../api";
+import { listAccounts } from "../services/accountsService";
 import { Search as SearchIcon } from "lucide-react";
 
 function csvDownload(filename, rows) {
@@ -32,7 +33,15 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get("/accounts").then((r) => setAccounts(r.data || []));
+    (async () => {
+      try {
+        const a = await listAccounts();
+        setAccounts(a || []);
+      } catch (err) {
+        console.error('Could not load accounts', err);
+        setAccounts([]);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -128,14 +137,15 @@ export default function SearchPage() {
       const missingIds = Array.from(new Set(txs.map((t) => t.accountId).filter((id) => id && !accMap[id])));
       if (missingIds.length) {
         try {
+          const { getAccount } = await import("../services/accountsService");
           const fetched = await Promise.all(
-            missingIds.map((id) => api.get(`/accounts/${encodeURIComponent(id)}`).catch(() => ({ data: null })))
+            missingIds.map((id) => getAccount(id).catch(() => null))
           );
           for (let i = 0; i < missingIds.length; i++) {
             const id = missingIds[i];
             const res = fetched[i];
-            if (res && res.data) {
-              accMap[id] = { name: res.data.name, openingBalance: Number(res.data.openingBalance || 0) };
+            if (res) {
+              accMap[id] = { name: res.name, openingBalance: Number(res.openingBalance || 0) };
             }
           }
         } catch (err) {

@@ -26,15 +26,25 @@ export default function SummaryDetail({ summary, aggregate, onBack }) {
     // the summary.date (e.g. "2025-11-27 → 2025-11-27") is used as the summaryRange key
     const range = summary?.date || null;
     try {
-      // fetch latest account record to get current openingBalance where possible
-      const res = await api.get(`/accounts/${accountId}`);
-      const acct = res.data || {
-        id: accountId,
-        name: accountName,
-        openingBalance: openingBefore,
-      };
-      setSelectedAccount(acct);
-      setSelectedRange(range);
+      // only fetch when we have a valid accountId; otherwise fall back
+      if (accountId) {
+        const res = await api.get(`/accounts/${accountId}`);
+        const acct = res.data || {
+          id: accountId,
+          name: accountName,
+          openingBalance: openingBefore,
+        };
+        setSelectedAccount(acct);
+        setSelectedRange(range);
+      } else {
+        // no account id available — use summary values
+        setSelectedAccount({
+          id: accountId,
+          name: accountName,
+          openingBalance: openingBefore,
+        });
+        setSelectedRange(range);
+      }
     } catch (err) {
       // fallback to using summary values
       setSelectedAccount({

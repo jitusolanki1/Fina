@@ -36,7 +36,6 @@ app.use(
     credentials: true,
   })
 );
-app.options("*", cors({ origin: allowedOrigins, credentials: true }));
 
 // Attach a request id to every request for tracing
 app.use((req, res, next) => {
@@ -60,10 +59,29 @@ app.use(decryptDate);
 
 const MONGO_URI = process.env.MONGO_URI ;
 mongoose.set("strictQuery", false);
+// small helper to mask credentials when printing the connection string
+function maskMongoUri(uri) {
+  if (!uri) return "(not set)";
+  try {
+    // replace any user:pass@ with ***@
+    return uri.replace(/:\/\/.+@/, "://***@");
+  } catch (e) {
+    return "(masked)";
+  }
+}
+
+console.log("Connecting to MongoDB (masked):", maskMongoUri(MONGO_URI));
+
 mongoose
   .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err.message));
+  .then(() => console.log("Mongoose connected"))
+  .catch((err) => console.error("Mongoose connection error:", err.message));
+
+// try to also connect with native MongoClient helper (optional)
+import { connectToMongo } from "./mongoClient.js";
+connectToMongo(MONGO_URI, process.env.MONGO_DB_NAME || "Ciw").catch((err) =>
+  console.error("Native MongoClient connection error:", err.message)
+);
 
 // routes
 app.use("/api/auth", authRoutes);

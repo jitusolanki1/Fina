@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../api";
+import { listAccounts } from "../services/accountsService";
 
 function fmtDate(d) {
   if (!d) return "";
@@ -81,14 +82,14 @@ export default function Reports() {
     try {
       const { start, end } = computeRange(rangeType);
       // fetch accounts and transactions (live + archived) in parallel
-      const [accRes, txRes, histRes, preTxRes, preHistRes] = await Promise.all([
-        api.get("/accounts"),
+      const [accounts, txRes, histRes, preTxRes, preHistRes] = await Promise.all([
+        listAccounts(),
         api.get(`/transactions?date_gte=${start}&date_lte=${end}`),
         api.get(`/transactionsHistory?date_gte=${start}&date_lte=${end}`),
         api.get(`/transactions?date_lt=${start}`),
         api.get(`/transactionsHistory?date_lt=${start}`),
       ]);
-      const accounts = accRes.data || [];
+      // accounts returned by listAccounts are normalized (include id)
       const txs = (txRes.data || []).concat(histRes.data || []);
       const preTxs = (preTxRes.data || []).concat(preHistRes.data || []);
 

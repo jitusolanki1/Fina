@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { ArrowUpRight, ArrowDownRight, IndianRupee } from "lucide-react";
 import api from "../api";
+import { listAccounts } from "../services/accountsService";
 import {
   BarChart,
   Bar,
@@ -43,12 +44,18 @@ export default function Dashboard({ focusedAccount = null }) {
     load();
   }, []);
   async function load() {
-    const [aRes, tRes] = await Promise.all([
-      api.get("/accounts"),
-      api.get("/transactions"),
-    ]);
-    setAccounts(aRes.data);
-    setTxs(tRes.data.map((t) => ({ ...t, date: t.date })));
+    try {
+      const [aRes, tRes] = await Promise.all([
+        listAccounts(),
+        api.get("/transactions"),
+      ]);
+      setAccounts(aRes || []);
+      setTxs((tRes.data || []).map((t) => ({ ...t, date: t.date })));
+    } catch (err) {
+      console.error('Dashboard load failed', err);
+      setAccounts([]);
+      setTxs([]);
+    }
   }
 
   // If focusedAccount is provided, filter txs to only that account
