@@ -102,3 +102,24 @@ router.post("/logout", (req, res) => {
 });
 
 export default router;
+
+// Developer-only debug endpoint: tells whether a refresh token was observed
+if (process.env.NODE_ENV !== 'production') {
+  router.get('/debug', (req, res) => {
+    const fromCookie = Boolean(req.cookies && req.cookies.refreshToken);
+    const fromBody = Boolean(req.body && req.body.refreshToken);
+    const fromHeader = Boolean(req.headers && (req.headers['x-refresh-token'] || req.headers.authorization));
+    // do not echo the token value; mask it if present
+    function mask(s) {
+      if (!s) return null;
+      const str = String(s);
+      if (str.length <= 8) return '****';
+      return str.slice(0, 4) + '...' + str.slice(-4);
+    }
+    res.json({
+      seen: { cookie: fromCookie, body: fromBody, header: fromHeader },
+      cookieValueSample: mask(req.cookies && req.cookies.refreshToken),
+      headerValueSample: mask(req.headers && (req.headers['x-refresh-token'] || req.headers.authorization)),
+    });
+  });
+}
