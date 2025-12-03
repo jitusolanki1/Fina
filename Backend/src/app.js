@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
+import { v4 as uuidv4 } from 'uuid';
 
 import authRoutes from "./routes/auth.js";
 import accountsRoutes from "./routes/accounts.js";
@@ -19,7 +20,33 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+// Configure CORS to allow requests (with credentials) from the frontend origins.
+// Provide a comma-separated list in env var FRONTEND_ORIGINS, or default to localhost and Netlify preview.
+const defaultOrigins = "http://localhost:5173,https://finaa-app.netlify.app";
+const allowedOrigins = (process.env.FRONTEND_ORIGINS || defaultOrigins).split(",").map((s) => s.trim());
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow non-browser or same-origin requests (no origin)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
+      return callback(new Error("CORS policy: Origin not allowed"));
+    },
+    credentials: true,
+  })
+);
+app.options("*", cors({ origin: allowedOrigins, credentials: true }));
+
+// Attach a request id to every request for tracing
+app.use((req, res, next) => {
+  try {
+    const id = uuidv4();
+    req.requestId = id;
+    res.setHeader('X-Request-Id', id);
+  } catch (e) {}
+  next();
+});
 app.use(cookieParser());
 app.use(bodyParser.json({ limit: "5mb" }));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -29,10 +56,9 @@ app.use(
   express.static(path.join(process.cwd(), "public", "uploads"))
 );
 
-// decrypt client-side encrypted date fields when present
 app.use(decryptDate);
 
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://jtu0108:cWrujIwuEEXTwVxq@zone.xqgmepc.mongodb.net/banking_app?retryWrites=true&w=majority&appName=Zone";
+const MONGO_URI = process.env.MONGO_URI ;
 mongoose.set("strictQuery", false);
 mongoose
   .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })

@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
 import { validateBody, schemas } from "../middleware/validate.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30PORT";
@@ -16,9 +17,11 @@ function signRefreshToken(user) {
   return jwt.sign({ sub: String(user._id) }, REFRESH_SECRET, { expiresIn: '7d' });
 }
 
-router.post("/register", validateBody(schemas.register), async (req, res, next) => {
-  const { email, password, name } = req.body;
-  try {
+router.post(
+  "/register",
+  validateBody(schemas.register),
+  asyncHandler(async (req, res) => {
+    const { email, password, name } = req.body;
     // convert password to base64 before hashing (per request)
     const encoded = Buffer.from(String(password)).toString("base64");
     const hash = await bcrypt.hash(encoded, 10);
@@ -27,16 +30,22 @@ router.post("/register", validateBody(schemas.register), async (req, res, next) 
     // auto-login pattern: issue tokens
     const accessToken = signAccessToken(u);
     const refreshToken = signRefreshToken(u);
-    res.cookie("refreshToken", refreshToken, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 3600 * 1000 });
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 3600 * 1000,
+    };
+    res.cookie("refreshToken", refreshToken, cookieOptions);
     res.json({ token: accessToken, user: { id: u._id, email: u.email, name: u.name } });
-  } catch (err) {
-    next(err);
-  }
-});
+  })
+);
 
-router.post("/login", validateBody(schemas.login), async (req, res, next) => {
-  const { email, password } = req.body;
-  try {
+router.post(
+  "/login",
+  validateBody(schemas.login),
+  asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
     const u = await User.findOne({ email });
     if (!u) return res.status(401).json({ error: "invalid credentials" });
     // base64-encode incoming password to match register behaviour
@@ -45,12 +54,16 @@ router.post("/login", validateBody(schemas.login), async (req, res, next) => {
     if (!ok) return res.status(401).json({ error: "invalid credentials" });
     const accessToken = signAccessToken(u);
     const refreshToken = signRefreshToken(u);
-    res.cookie("refreshToken", refreshToken, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 7 * 24 * 3600 * 1000 });
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 3600 * 1000,
+    };
+    res.cookie("refreshToken", refreshToken, cookieOptions);
     res.json({ token: accessToken, user: { id: u._id, email: u.email, name: u.name } });
-  } catch (err) {
-    next(err);
-  }
-});
+  })
+);
 
 // POST /api/auth/refresh -> uses httpOnly cookie
 router.post("/refresh", async (req, res) => {
@@ -68,7 +81,8 @@ router.post("/refresh", async (req, res) => {
 });
 
 router.post("/logout", (req, res) => {
-  res.clearCookie("refreshToken", { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' };
+  res.clearCookie("refreshToken", cookieOptions);
   res.json({ ok: true });
 });
 

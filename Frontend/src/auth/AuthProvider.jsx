@@ -40,16 +40,9 @@ export function AuthProvider({ children }) {
         return { ok: true };
       }
     } catch (e) {
-      // fallthrough to demo behaviour
+      return { ok: false, error: e?.response?.data || e.message || 'login failed' };
     }
-
-    // fallback/demo behaviour when backend not available
-    const demoToken = `demo-token-${Date.now()}`;
-    setToken(demoToken);
-    setUser({ email });
-    localStorage.setItem("fina_token", demoToken);
-    localStorage.setItem("fina_user", JSON.stringify({ email }));
-    return { ok: true, demo: true };
+    return { ok: false, error: 'no token returned' };
   }
 
   async function register(email, password, name) {
@@ -62,16 +55,9 @@ export function AuthProvider({ children }) {
         return { ok: true };
       }
     } catch (e) {
-      // ignore
+      return { ok: false, error: e?.response?.data || e.message || 'register failed' };
     }
-
-    // fallback/demo behaviour
-    const demoToken = `demo-token-${Date.now()}`;
-    setToken(demoToken);
-    setUser({ email });
-    localStorage.setItem("fina_token", demoToken);
-    localStorage.setItem("fina_user", JSON.stringify({ email }));
-    return { ok: true, demo: true };
+    return { ok: false, error: 'no token returned' };
   }
 
   function logout() {
