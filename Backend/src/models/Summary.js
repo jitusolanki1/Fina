@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 
 const PerAccountSchema = new mongoose.Schema({
   accountId: String,
@@ -16,6 +17,7 @@ const PerAccountSchema = new mongoose.Schema({
 const SummarySchema = new mongoose.Schema({
   date: { type: String },
   createdBy: { type: String },
+  uuid: { type: String, default: () => uuidv4(), index: true },
   createdAt: { type: String },
   perAccount: [PerAccountSchema],
   overall: { type: Object },

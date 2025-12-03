@@ -52,9 +52,9 @@ export function AuthProvider({ children }) {
     return { ok: true, demo: true };
   }
 
-  async function register(email, password) {
+  async function register(email, password, name) {
     try {
-      const resp = await api.post("/auth/register", { email, password });
+      const resp = await api.post("/auth/register", { email, password, name });
       const data = resp?.data;
       if (data?.token) {
         setToken(data.token);

@@ -1,7 +1,7 @@
 import crypto from "crypto";
 
 // expects process.env.ENCRYPTION_KEY to be set (32 bytes recommended)
-const KEY = process.env.ENCRYPTION_KEY || "default_key_please_change_32bytes!!";
+const KEY = process.env.ENCRYPTION_KEY;
 
 function decipherBase64(input) {
   // input is base64 of iv:ciphertext

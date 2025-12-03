@@ -19,7 +19,9 @@ function signRefreshToken(user) {
 router.post("/register", validateBody(schemas.register), async (req, res, next) => {
   const { email, password, name } = req.body;
   try {
-    const hash = await bcrypt.hash(password, 10);
+    // convert password to base64 before hashing (per request)
+    const encoded = Buffer.from(String(password)).toString("base64");
+    const hash = await bcrypt.hash(encoded, 10);
     const u = new User({ email, passwordHash: hash, name });
     await u.save();
     // auto-login pattern: issue tokens
@@ -37,7 +39,9 @@ router.post("/login", validateBody(schemas.login), async (req, res, next) => {
   try {
     const u = await User.findOne({ email });
     if (!u) return res.status(401).json({ error: "invalid credentials" });
-    const ok = await u.verifyPassword(password);
+    // base64-encode incoming password to match register behaviour
+    const encoded = Buffer.from(String(password)).toString("base64");
+    const ok = await u.verifyPassword(encoded);
     if (!ok) return res.status(401).json({ error: "invalid credentials" });
     const accessToken = signAccessToken(u);
     const refreshToken = signRefreshToken(u);
