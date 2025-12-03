@@ -3,6 +3,7 @@ import { Box } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../auth/AuthProvider';
 import { useNavigate } from 'react-router-dom';
+import LoadingButton from '../common-ui/LoadingButton';
 
 export default function Register(){
   const [email, setEmail] = useState('');
@@ -11,6 +12,7 @@ export default function Register(){
   const [confirm, setConfirm] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   async function submit(e){
     e.preventDefault();
@@ -18,12 +20,19 @@ export default function Register(){
     if(!name) return toast.error('Name required');
     if(!password) return toast.error('Password required');
     if(password !== confirm) return toast.error('Passwords do not match');
-    const res = await register(email, password, name);
-    if(res?.ok){
-      toast.success('Registered successfully');
-      navigate('/');
-    } else {
+    setLoading(true);
+    try{
+      const res = await register(email, password, name);
+      if(res?.ok){
+        toast.success('Registered successfully');
+        navigate('/');
+      } else {
+        toast.error(res?.error || 'Registration failed');
+      }
+    }catch(err){
       toast.error('Registration failed');
+    }finally{
+      setLoading(false);
     }
   }
 
@@ -55,7 +64,13 @@ export default function Register(){
               </div>
 
               <div>
-                <button className="auth-btn" type="submit">Create account</button>
+                <LoadingButton
+                  type="submit"
+                  loading={loading}
+                  className="auth-btn w-full justify-center"
+                >
+                  {loading ? 'Creating account...' : 'Create account'}
+                </LoadingButton>
               </div>
 
               <div className="auth-footer">Already have an account? <a className="text-slate-200" href="/login">Sign in</a></div>

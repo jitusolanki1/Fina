@@ -37,6 +37,11 @@ router.post(
       path: '/',
       maxAge: 7 * 24 * 3600 * 1000,
     };
+    // log cookie issuance for debugging (mask token)
+    try {
+      const sample = String(refreshToken).slice(0, 6) + '...' + String(refreshToken).slice(-6);
+      console.log(`Issuing refresh cookie (sample=${sample}) secure=${cookieOptions.secure} sameSite=${cookieOptions.sameSite}`);
+    } catch (e) {}
     res.cookie("refreshToken", refreshToken, cookieOptions);
     // in non-production include refresh token in body as a fallback for clients
     const responseBody = { token: accessToken, user: { id: u._id, email: u.email, name: u.name } };
@@ -65,6 +70,10 @@ router.post(
       path: '/',
       maxAge: 7 * 24 * 3600 * 1000,
     };
+    try {
+      const sample = String(refreshToken).slice(0, 6) + '...' + String(refreshToken).slice(-6);
+      console.log(`Issuing refresh cookie (sample=${sample}) secure=${cookieOptions.secure} sameSite=${cookieOptions.sameSite}`);
+    } catch (e) {}
     res.cookie("refreshToken", refreshToken, cookieOptions);
     const responseBody = { token: accessToken, user: { id: u._id, email: u.email, name: u.name } };
     if (process.env.NODE_ENV !== 'production') responseBody.refreshToken = refreshToken;
@@ -83,6 +92,11 @@ router.post("/refresh", async (req, res) => {
     const m = String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i);
     if (m) token = m[1];
   }
+  // logging which source provided the token (for debugging)
+  try {
+    const sources = { cookie: Boolean(req.cookies && req.cookies.refreshToken), body: Boolean(req.body && req.body.refreshToken), header: Boolean(req.headers && (req.headers['x-refresh-token'] || req.headers.authorization)) };
+    console.log('Refresh attempt - token sources:', sources);
+  } catch (e) {}
   if (!token) return res.status(401).json({ error: "missing refresh token" });
   try {
     const payload = jwt.verify(token, REFRESH_SECRET);

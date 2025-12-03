@@ -3,6 +3,7 @@ import { Apple, Chrome, Facebook, Box } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../../auth/AuthProvider";
 import { useNavigate, useLocation, Link } from "react-router-dom";
+import LoadingButton from "../common-ui/LoadingButton";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -10,19 +11,26 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [loading, setLoading] = useState(false);
 
   async function submit(e) {
     e.preventDefault();
     if (!email) return toast.error("Email required");
 
-    const res = await login(email, password);
-
-    if (res?.ok) {
-      toast.success("Logged in");
-      const dest = location.state?.from?.pathname || "/";
-      navigate(dest, { replace: true });
-    } else {
+    setLoading(true);
+    try {
+      const res = await login(email, password);
+      if (res?.ok) {
+        toast.success("Logged in");
+        const dest = location.state?.from?.pathname || "/";
+        navigate(dest, { replace: true });
+      } else {
+        toast.error(res?.error || "Login failed");
+      }
+    } catch (err) {
       toast.error("Login failed");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -82,12 +90,13 @@ export default function Login() {
               </div>
 
               {/* Submit */}
-              <button
-                className="w-full py-3 rounded-md bg-purple-600 hover:bg-purple-700 
-                transition shadow-lg hover:shadow-purple-700/40 font-medium"
+              <LoadingButton
+                type="submit"
+                loading={loading}
+                className="w-full py-3 rounded-md bg-purple-600 hover:bg-purple-700 transition shadow-lg hover:shadow-purple-700/40 font-medium text-white"
               >
-                Login
-              </button>
+                {loading ? 'Signing in...' : 'Login'}
+              </LoadingButton>
 
               {/* Divider */}
               <div className="flex items-center gap-4">
