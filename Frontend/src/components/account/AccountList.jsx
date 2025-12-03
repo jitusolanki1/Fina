@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRight, Edit3, Trash2, Plus } from "lucide-react";
-import api from "../../api";
+import { listAccounts, deleteAccount as svcDeleteAccount } from "../../services/accountsService";
+import { listTransactions, deleteTransaction as svcDeleteTransaction } from "../../services/transactionService";
 import { totalsFor } from "../../utils/logic";
 import AccountForm from "./AccountForm";
 import AccountDetail from "./AccountDetail";
@@ -22,11 +23,11 @@ export default function AccountList({ onOpen }) {
   async function fetchAll() {
     try {
       const [aRes, tRes] = await Promise.all([
-        api.get("/accounts"),
-        api.get("/transactions"),
+        listAccounts(),
+        listTransactions(),
       ]);
-      setAccounts(aRes.data || []);
-      setTransactions(tRes.data || []);
+      setAccounts(aRes || []);
+      setTransactions(tRes || []);
     } catch (err) {
       console.error(err);
       toast.error("Could not load accounts");
@@ -50,10 +51,9 @@ export default function AccountList({ onOpen }) {
       return;
     try {
       // delete related transactions first
-      const txRes = await api.get(`/transactions?accountId=${account.id}`);
-      const txs = txRes.data || [];
-      await Promise.all(txs.map((t) => api.delete(`/transactions/${t.id}`)));
-      await api.delete(`/accounts/${account.id}`);
+      const txs = await listTransactions({ accountId: account.id }) || [];
+      await Promise.all(txs.map((t) => svcDeleteTransaction(t.id)));
+      await svcDeleteAccount(account.id);
       toast.success("Account deleted");
       fetchAll();
     } catch (err) {

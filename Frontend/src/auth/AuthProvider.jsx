@@ -1,41 +1,42 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api from "../api";
+import api, { setAccessToken } from "../api";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const raw = localStorage.getItem("fina_user");
-      return raw ? JSON.parse(raw) : null;
-    } catch (e) {
-      return null;
-    }
-  });
-  const [token, setToken] = useState(() => localStorage.getItem("fina_token"));
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
+
+  // try to refresh token on mount (refresh token stored in httpOnly cookie)
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const resp = await api.post("/auth/refresh");
+        const data = resp?.data;
+        if (data?.token && mounted) {
+          setToken(data.token);
+          setUser(data.user || null);
+          setAccessToken(data.token);
+        }
+      } catch (e) {
+        // no refresh available
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   useEffect(() => {
-    if (token) {
-      // attach token to axios default header
-      try {
-        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      } catch (e) {}
-    } else {
-      try {
-        delete api.defaults.headers.common["Authorization"];
-      } catch (e) {}
-    }
+    setAccessToken(token);
   }, [token]);
 
   async function login(email, password) {
     try {
-      const resp = await api.post("/login", { email, password });
+      const resp = await api.post("/auth/login", { email, password });
       const data = resp?.data;
       if (data?.token) {
         setToken(data.token);
         setUser(data.user || { email });
-        localStorage.setItem("fina_token", data.token);
-        localStorage.setItem("fina_user", JSON.stringify(data.user || { email }));
         return { ok: true };
       }
     } catch (e) {
@@ -53,13 +54,11 @@ export function AuthProvider({ children }) {
 
   async function register(email, password) {
     try {
-      const resp = await api.post("/register", { email, password });
+      const resp = await api.post("/auth/register", { email, password });
       const data = resp?.data;
       if (data?.token) {
         setToken(data.token);
         setUser(data.user || { email });
-        localStorage.setItem("fina_token", data.token);
-        localStorage.setItem("fina_user", JSON.stringify(data.user || { email }));
         return { ok: true };
       }
     } catch (e) {
@@ -79,8 +78,8 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     try {
-      localStorage.removeItem("fina_token");
-      localStorage.removeItem("fina_user");
+      // notify server to clear refresh cookie
+      api.post("/auth/logout").catch(() => {});
     } catch (e) {}
   }
 

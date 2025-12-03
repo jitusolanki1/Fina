@@ -3,6 +3,8 @@ import { Trash2, Edit3 } from "lucide-react";
 import api from "../../api";
 import toast from "react-hot-toast";
 import { runningBalances } from "../../utils/logic";
+import { listTransactions, createTransaction, deleteTransaction, updateTransaction } from "../../services/transactionService";
+import { listSummaries } from "../../services/summariesService";
 
 export default function AccountSheet({
   account,
@@ -29,17 +31,11 @@ export default function AccountSheet({
       // If historyRange is provided, load archived transactions for that summaryRange
       let txs = [];
       if (historyRange) {
-        const q = encodeURIComponent(historyRange);
-        const res = await api.get(
-          `/transactionsHistory?summaryRange=${q}&accountId=${account.id}&_sort=date&_order=asc`
-        );
-        txs = res.data || [];
+        const txsHist = await (await import("../../services/historyService")).listHistory({ summaryRange: historyRange, accountId: account.id, _sort: 'date', _order: 'asc' });
+        txs = txsHist || [];
       } else {
         // Fetch live transactions in ascending date order
-        const res = await api.get(
-          `/transactions?accountId=${account.id}&_sort=date&_order=asc`
-        );
-        txs = res.data || [];
+        txs = await listTransactions({ accountId: account.id });
       }
       setRawTxs(txs);
       const withBalances = runningBalances(account.openingBalance, txs);
@@ -80,8 +76,7 @@ export default function AccountSheet({
     }
 
     try {
-      const res = await api.get(`/summaries?_sort=date&_order=desc`);
-      const summaries = res.data;
+      const summaries = await listSummaries({ _sort: 'date', _order: 'desc' });
       for (const s of summaries) {
         const accSummary = s.perAccount.find(
           (p) => String(p.accountId) === String(account.id)
@@ -126,7 +121,7 @@ export default function AccountSheet({
   async function addTx(e) {
     e.preventDefault();
     try {
-      await api.post("/transactions", {
+      await createTransaction({
         accountId: account.id,
         description: form.description,
         deposit: Number(form.deposit) || 0,
@@ -384,9 +379,7 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await api.patch(`/transactions/${r.id}`, {
-                              description: editingCell.value,
-                            });
+                            await updateTransaction(r.id, { description: editingCell.value });
                             setEditingCell(null);
                             load();
                           } catch (err) {
@@ -427,9 +420,7 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await api.patch(`/transactions/${r.id}`, {
-                              deposit: Number(editingCell.value),
-                            });
+                            await updateTransaction(r.id, { deposit: Number(editingCell.value) });
                             setEditingCell(null);
                             load();
                           } catch (err) {
@@ -470,9 +461,7 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await api.patch(`/transactions/${r.id}`, {
-                              otherDeposit: Number(editingCell.value),
-                            });
+                            await updateTransaction(r.id, { otherDeposit: Number(editingCell.value) });
                             setEditingCell(null);
                             load();
                           } catch (err) {
@@ -513,9 +502,7 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await api.patch(`/transactions/${r.id}`, {
-                              penalWithdrawal: Number(editingCell.value),
-                            });
+                            await updateTransaction(r.id, { penalWithdrawal: Number(editingCell.value) });
                             setEditingCell(null);
                             load();
                           } catch (err) {
@@ -556,9 +543,7 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await api.patch(`/transactions/${r.id}`, {
-                              otherWithdrawal: Number(editingCell.value),
-                            });
+                            await updateTransaction(r.id, { otherWithdrawal: Number(editingCell.value) });
                             setEditingCell(null);
                             load();
                           } catch (err) {
@@ -597,7 +582,7 @@ export default function AccountSheet({
                             onClick={async () => {
                               if (!confirm("Delete this transaction?")) return;
                               try {
-                                await api.delete(`/transactions/${r.id}`);
+                                await deleteTransaction(r.id);
                                 toast.success("Transaction deleted");
                                 load();
                               } catch (err) {

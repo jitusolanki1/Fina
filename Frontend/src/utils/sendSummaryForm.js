@@ -15,6 +15,7 @@
 */
 
 import * as XLSX from "xlsx";
+import api from "../api";
 
 function buildPerAccountRows(summary) {
   const rows = (summary.perAccount || []).map((p) => ({
@@ -134,7 +135,7 @@ export async function generateSummaryXlsxBlob(summary) {
 export async function sendSummaryViaFormspree(
   summary,
   formUrl = "https://formspree.io/f/mdkqzwqg",
-  options = { attachFile: false, replyTo: null }
+  options = { attachFile: false, replyTo: null, usePresign: true }
 ) {
   if (!summary) throw new Error("summary required");
 
@@ -157,6 +158,54 @@ export async function sendSummaryViaFormspree(
   if (options && options.replyTo) payload._replyto = options.replyTo;
 
   // If caller explicitly requested an attached file, attempt upload and fallback to JSON.
+  // If presign flow is enabled, try server presign -> upload to storage -> include objectUrl in payload
+  if (options && options.usePresign) {
+    try {
+      const blob = await generateSummaryXlsxBlob(summary);
+      const fileName = `summary-${(summary.date || "summary").replace(/\s+/g, "_")}.xlsx`;
+
+      // ask backend for presigned upload URL
+      const presignResp = await api.post("/uploads/presign", {
+        filename: fileName,
+        contentType: blob.type || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const { uploadUrl, objectUrl } = presignResp.data || {};
+      if (uploadUrl && objectUrl) {
+        // PUT the blob directly to the storage service
+        const putResp = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": blob.type || "application/octet-stream" },
+          body: blob,
+        });
+
+        if (!putResp.ok) {
+          throw new Error(`Presigned upload failed: ${putResp.status} ${putResp.statusText}`);
+        }
+
+        // include the object URL in the payload and send JSON form (no binary attachment)
+        payload.objectUrl = objectUrl;
+        const res = await fetch(formUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          const err = new Error(`Formspree JSON submission failed: ${res.status} ${res.statusText}`);
+          err.responseText = text;
+          throw err;
+        }
+
+        return res;
+      }
+    } catch (err) {
+      // if presign/upload fails, fall through to other methods
+      console.info("Presign/upload failed, falling back to Formspree paths", err && err.message);
+    }
+  }
+
   if (options && options.attachFile) {
     try {
       const blob = await generateSummaryXlsxBlob(summary);

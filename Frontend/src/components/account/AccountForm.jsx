@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import api from '../../api';
+import { createAccount } from '../../services/accountsService';
 import toast from 'react-hot-toast';
 
 export default function AccountForm({ onCreated, onOpenDetail }) {
@@ -10,8 +10,7 @@ export default function AccountForm({ onCreated, onOpenDetail }) {
     e.preventDefault();
     if (!name) return toast.error('Name required');
     try {
-      const res = await api.post('/accounts', { name, openingBalance: Number(opening) });
-      const account = res.data;
+      const account = await createAccount({ name, openingBalance: Number(opening) });
       // NOTE: don't create a duplicate opening transaction here. The app
       // uses the account's `openingBalance` as the canonical opening amount.
       // Creating both `openingBalance` and an 'Opening Balance' transaction

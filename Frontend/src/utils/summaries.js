@@ -1,4 +1,8 @@
 import api from "../api";
+import { listAccounts, updateAccount } from "../services/accountsService";
+import { listTransactions, deleteTransaction } from "../services/transactionService";
+import { createSummary, listSummaries, getSummary, deleteSummary } from "../services/summariesService";
+import { createHistory, listHistory, deleteHistory } from "../services/historyService";
 
 function fmtDate(d) {
   const dt = new Date(d);
@@ -15,13 +19,13 @@ export function dateDaysAgo(n) {
 }
 
 export async function fetchSummaries() {
-  const res = await api.get("/summaries?_sort=createdAt&_order=desc");
-  return res.data || [];
+  const res = await listSummaries({ _sort: 'createdAt', _order: 'desc' });
+  return res || [];
 }
 
 export async function fetchSummariesBetween(start, end) {
-  const res = await api.get(`/summaries?date_gte=${start}&date_lte=${end}`);
-  return res.data || [];
+  const res = await listSummaries({ date_gte: start, date_lte: end });
+  return res || [];
 }
 
 // Non-destructive preview: compute per-account and overall totals for a date range
@@ -31,14 +35,10 @@ export async function previewSummaryRange(start, end) {
   end = fmtDate(end);
 
   // fetch accounts and all transactions in range in parallel (fewer requests)
-  const txQuery = `/transactions?date=${start}&date=${end}`;
-  const [aRes, txRes] = await Promise.all([
-    api.get("/accounts"),
-    api.get(txQuery),
+  const [accounts, txs] = await Promise.all([
+    listAccounts(),
+    listTransactions({ date: `${start}`, date: `${end}` }),
   ]);
-
-  const accounts = aRes.data || [];
-  const txs = txRes.data || [];
 
   // group transactions by accountId
   const txByAccount = txs.reduce((acc, t) => {
@@ -134,13 +134,10 @@ export async function createSummaryRange(start, end) {
   start = fmtDate(start);
   end = fmtDate(end);
 
-  const [aRes, txRes] = await Promise.all([
-    api.get("/accounts"),
-    api.get(`/transactions?date=${start}&date=${end}`),
+  const [accounts, txs] = await Promise.all([
+    listAccounts(),
+    listTransactions({ date: `${start}`, date: `${end}` }),
   ]);
-
-  const accounts = aRes.data || [];
-  const txs = txRes.data || [];
 
   const txByAccount = txs.reduce((acc, t) => {
     const k = t.accountId || "__none__";
@@ -204,12 +201,8 @@ export async function createSummaryRange(start, end) {
   // archive all transactions (post to history then delete)
   for (const t of txs) {
     try {
-      await api.post("/transactionsHistory", {
-        ...t,
-        archivedAt: new Date().toISOString(),
-        summaryRange: `${start} → ${end}`,
-      });
-      await api.delete(`/transactions/${t.id}`);
+      await createHistory({ ...t, archivedAt: new Date().toISOString(), summaryRange: `${start} → ${end}` });
+      await deleteTransaction(t.id);
     } catch (err) {
       console.error("move transaction error", err);
     }
@@ -221,9 +214,7 @@ export async function createSummaryRange(start, end) {
   // update account opening balances
   for (const pa of perAccount) {
     try {
-      await api.patch(`/accounts/${pa.accountId}`, {
-        openingBalance: pa.openingAfter,
-      });
+      await updateAccount(pa.accountId, { openingBalance: pa.openingAfter });
     } catch (err) {
       console.error("update account openingBalance", err);
     }
@@ -237,16 +228,15 @@ export async function createSummaryRange(start, end) {
     txCount,
   };
 
-  const saved = await api.post("/summaries", summary);
-  return saved.data;
+  const saved = await createSummary(summary);
+  return saved;
 }
 
 // undo (revert) a previously created summary: restore archived transactions, delete the rolled opening txs,
 // and reset account openingBalance to the "openingBefore" value recorded in the summary.
 export async function undoSummary(summaryId) {
   // fetch summary
-  const sRes = await api.get(`/summaries/${summaryId}`);
-  const summary = sRes.data;
+  const summary = await getSummary(summaryId);
   if (!summary) throw new Error("Summary not found");
 
   const range = summary.date; // e.g. "2025-11-23 → 2025-11-24"
@@ -256,32 +246,26 @@ export async function undoSummary(summaryId) {
     const accId = pa.accountId;
     // find archived transactions for this account and summaryRange
     const q = encodeURIComponent(range);
-    const histRes = await api.get(
-      `/transactionsHistory?summaryRange=${q}&accountId=${accId}`
-    );
-    const hist = histRes.data || [];
+    const hist = await listHistory({ summaryRange: range, accountId: accId }) || [];
 
     for (const h of hist) {
       const toRestore = { ...h };
       delete toRestore.id;
       delete toRestore.archivedAt;
       delete toRestore.summaryRange;
-      try {
+        try {
         await api.post("/transactions", toRestore);
-        await api.delete(`/transactionsHistory/${h.id}`);
+        await deleteHistory(h.id);
       } catch (err) {
         console.error("restore history tx", err);
       }
     }
 
     try {
-      const rolledRes = await api.get(
-        `/transactions?accountId=${accId}&rolled=true&date=${end}`
-      );
-      const rolledTxs = rolledRes.data || [];
+      const rolledTxs = await listTransactions({ accountId: accId, rolled: true, date: end }) || [];
       for (const r of rolledTxs) {
         try {
-          await api.delete(`/transactions/${r.id}`);
+          await deleteTransaction(r.id);
         } catch (err) {
           console.error("delete rolled tx", err);
         }
@@ -291,9 +275,7 @@ export async function undoSummary(summaryId) {
     }
 
     try {
-      await api.patch(`/accounts/${accId}`, {
-        openingBalance: pa.openingBefore,
-      });
+      await updateAccount(accId, { openingBalance: pa.openingBefore });
     } catch (err) {
       console.error("revert openingBalance", err);
     }

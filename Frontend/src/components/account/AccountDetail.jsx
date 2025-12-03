@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import api from "../../api";
+import { createAccount, updateAccount } from "../../services/accountsService";
 import toast from "react-hot-toast";
 import AccountSheet from "./AccountSheet";
 
@@ -17,13 +17,13 @@ export default function AccountDetail({ account: initialAccount, onSaved ,onClos
   async function save() {
     try {
       if (isNew) {
-        const r = await api.post("/accounts", account);
+        const created = await createAccount(account);
         toast.success("Account created");
-        onSaved && onSaved(r.data);
+        onSaved && onSaved(created);
       } else {
-        await api.patch(`/accounts/${account.id}`, account);
+        const updated = await updateAccount(account.id, account);
         toast.success("Account updated");
-        onSaved && onSaved(account);
+        onSaved && onSaved(updated);
       }
     } catch (err) {
       console.error(err);
