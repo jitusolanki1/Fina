@@ -110,7 +110,7 @@ router.post("/refresh", async (req, res) => {
 });
 
 router.post("/logout", (req, res) => {
-  const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' };
+  const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', path: '/' };
   res.clearCookie("refreshToken", cookieOptions);
   res.json({ ok: true });
 });

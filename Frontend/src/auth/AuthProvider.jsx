@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
+  const [initialized, setInitialized] = useState(false);
 
   // try to refresh token on mount (refresh token stored in httpOnly cookie)
   useEffect(() => {
@@ -20,22 +21,26 @@ export function AuthProvider({ children }) {
           setAccessToken(data.token);
         }
       } catch (e) {
-        // try fallback refresh token stored in localStorage (set during login in non-production)
+        // in dev only: try fallback refresh token stored in localStorage (set during login)
         try {
-          const fallback = localStorage.getItem("refreshTokenFallback");
-          if (fallback) {
-            const r2 = await api.post("/auth/refresh", { refreshToken: fallback });
-            const d2 = r2?.data;
-            if (d2?.token && mounted) {
-              setToken(d2.token);
-              setUser(d2.user || null);
-              setAccessToken(d2.token);
+          if (import.meta.env.DEV) {
+            const fallback = localStorage.getItem("refreshTokenFallback");
+            if (fallback) {
+              const r2 = await api.post("/auth/refresh", { refreshToken: fallback });
+              const d2 = r2?.data;
+              if (d2?.token && mounted) {
+                setToken(d2.token);
+                setUser(d2.user || null);
+                setAccessToken(d2.token);
+              }
             }
           }
         } catch (e2) {
           // still no refresh available
         }
       }
+      // mark that initial auth check finished (so routes can render)
+      if (mounted) setInitialized(true);
     })();
     return () => { mounted = false; };
   }, []);
@@ -51,8 +56,8 @@ export function AuthProvider({ children }) {
       if (data?.token) {
         setToken(data.token);
         setUser(data.user || { email });
-        // persist fallback refresh token in non-production when server returns it
-        try { if (data.refreshToken) localStorage.setItem("refreshTokenFallback", data.refreshToken); } catch (e) {}
+        // persist fallback refresh token only in dev when server returns it
+        try { if (import.meta.env.DEV && data.refreshToken) localStorage.setItem("refreshTokenFallback", data.refreshToken); } catch (e) {}
         return { ok: true };
       }
     } catch (e) {
@@ -68,7 +73,7 @@ export function AuthProvider({ children }) {
       if (data?.token) {
         setToken(data.token);
         setUser(data.user || { email });
-        try { if (data.refreshToken) localStorage.setItem("refreshTokenFallback", data.refreshToken); } catch (e) {}
+        try { if (import.meta.env.DEV && data.refreshToken) localStorage.setItem("refreshTokenFallback", data.refreshToken); } catch (e) {}
         return { ok: true };
       }
     } catch (e) {
@@ -90,7 +95,7 @@ export function AuthProvider({ children }) {
   const isAuthenticated = Boolean(token);
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, isAuthenticated, initialized }}>
       {children}
     </AuthContext.Provider>
   );
