@@ -1,24 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { ArrowUpRight, ArrowDownRight, IndianRupee } from "lucide-react";
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 import { listAccounts } from "../services/accountsService";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  PieChart,
-  Pie,
-  Cell,
-  CartesianGrid,
-  Legend,
-} from "recharts";
+// Recharts is large; load it only when the Dashboard actually renders charts.
+// We'll dynamically import it at runtime to keep the initial vendor chunk small.
 
 function isoWeekNumber(d) {
   // Copy date so don't modify original
@@ -35,7 +20,7 @@ function formatMonthKey(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export default function Dashboard({ focusedAccount = null }) {
+function Dashboard({ focusedAccount = null }) {
   const [accounts, setAccounts] = useState([]);
   const [txs, setTxs] = useState([]);
   const [range, setRange] = useState("3m"); // '3m' | '30d' | '7d'
@@ -47,10 +32,10 @@ export default function Dashboard({ focusedAccount = null }) {
     try {
       const [aRes, tRes] = await Promise.all([
         listAccounts(),
-        api.get("/transactions"),
+        fetchJson('/transactions'),
       ]);
       setAccounts(aRes || []);
-      setTxs((tRes.data || []).map((t) => ({ ...t, date: t.date })));
+      setTxs((tRes || []).map((t) => ({ ...t, date: t.date })));
     } catch (err) {
       console.error('Dashboard load failed', err);
       setAccounts([]);
@@ -59,6 +44,22 @@ export default function Dashboard({ focusedAccount = null }) {
   }
 
   // If focusedAccount is provided, filter txs to only that account
+    // dynamic load of recharts to avoid bundling it into the main vendor chunk
+    const [RC, setRC] = useState(null);
+    useEffect(() => {
+      let mounted = true;
+      import("recharts")
+        .then((mod) => {
+          if (mounted) setRC(mod);
+        })
+        .catch((err) => {
+          console.debug("Recharts dynamic import failed", err);
+        });
+      return () => {
+        mounted = false;
+      };
+    }, []);
+
   const filteredTxs = useMemo(() => {
     if (!focusedAccount) return txs;
     const id = focusedAccount.id || focusedAccount;
@@ -362,6 +363,26 @@ export default function Dashboard({ focusedAccount = null }) {
         </div>
       </div>
 
+      {/* Lightweight chart area — only rendered when recharts is loaded */}
+      <div>
+        {RC ? (
+          <div className="card-dark p-4 rounded-lg">
+            <h4 className="font-medium mb-2 text-slate-200">Balance</h4>
+            <RC.ResponsiveContainer width="100%" height={220}>
+              <RC.AreaChart data={globalChartSeries}>
+                <RC.CartesianGrid strokeDasharray="3 3" />
+                <RC.XAxis dataKey="date" />
+                <RC.YAxis />
+                <RC.Tooltip />
+                <RC.Area type="monotone" dataKey="balance" stroke="#10b981" fill="#10b98133" />
+              </RC.AreaChart>
+            </RC.ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
+        )}
+      </div>
+
       {/* Main content */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold text-slate-100">
@@ -434,27 +455,31 @@ export default function Dashboard({ focusedAccount = null }) {
                 Balance Over Time
               </h4>
               <div style={{ width: "100%", height: 260 }}>
-                <ResponsiveContainer>
-                  <LineChart data={analytics.balanceSeries}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#0f1720" />
-                    <XAxis dataKey="date" tick={{ fill: "#94a3b8" }} />
-                    <YAxis tick={{ fill: "#94a3b8" }} />
-                    <Tooltip
-                      wrapperStyle={{
-                        background: "#0b1220",
-                        border: "1px solid #1f2937",
-                        color: "#e6eef8",
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="balance"
-                      stroke="#60a5fa"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {RC ? (
+                  <RC.ResponsiveContainer>
+                    <RC.LineChart data={analytics.balanceSeries}>
+                      <RC.CartesianGrid strokeDasharray="3 3" stroke="#0f1720" />
+                      <RC.XAxis dataKey="date" tick={{ fill: "#94a3b8" }} />
+                      <RC.YAxis tick={{ fill: "#94a3b8" }} />
+                      <RC.Tooltip
+                        wrapperStyle={{
+                          background: "#0b1220",
+                          border: "1px solid #1f2937",
+                          color: "#e6eef8",
+                        }}
+                      />
+                      <RC.Line
+                        type="monotone"
+                        dataKey="balance"
+                        stroke="#60a5fa"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </RC.LineChart>
+                  </RC.ResponsiveContainer>
+                ) : (
+                  <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
+                )}
               </div>
             </div>
           </div>
@@ -462,27 +487,31 @@ export default function Dashboard({ focusedAccount = null }) {
           <div className="grid md:grid-cols-3 gap-4">
             <div className="card-dark p-3 rounded shadow">
               <h4 className="font-medium mb-2">Deposit vs Withdrawal</h4>
-              <div style={{ width: "100%", height: 180 }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={70}
-                      label
-                    >
-                      {pieData.map((entry, idx) => (
-                        <Cell
-                          key={`cell-${idx}`}
-                          fill={COLORS[idx % COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div style={{ width: "100%", height: 180 }}>
+                {RC ? (
+                  <RC.ResponsiveContainer>
+                    <RC.PieChart>
+                      <RC.Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        outerRadius={70}
+                        label
+                      >
+                        {pieData.map((entry, idx) => (
+                          <RC.Cell
+                            key={`cell-${idx}`}
+                            fill={COLORS[idx % COLORS.length]}
+                          />
+                        ))}
+                      </RC.Pie>
+                      <RC.Tooltip />
+                      <RC.Legend />
+                    </RC.PieChart>
+                  </RC.ResponsiveContainer>
+                ) : (
+                  <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
+                )}
               </div>
             </div>
 
@@ -490,16 +519,20 @@ export default function Dashboard({ focusedAccount = null }) {
               <h4 className="font-medium mb-2">
                 Monthly Deposits vs Withdrawals
               </h4>
-              <div style={{ width: "100%", height: 220 }}>
-                <ResponsiveContainer>
-                  <BarChart data={analytics.monthly}>
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="deposit" fill="#10b981" />
-                    <Bar dataKey="withdrawal" fill="#ef4444" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ width: "100%", height: 220 }}>
+                {RC ? (
+                  <RC.ResponsiveContainer>
+                    <RC.BarChart data={analytics.monthly}>
+                      <RC.XAxis dataKey="month" />
+                      <RC.YAxis />
+                      <RC.Tooltip />
+                      <RC.Bar dataKey="deposit" fill="#10b981" />
+                      <RC.Bar dataKey="withdrawal" fill="#ef4444" />
+                    </RC.BarChart>
+                  </RC.ResponsiveContainer>
+                ) : (
+                  <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
+                )}
               </div>
             </div>
           </div>
@@ -507,43 +540,51 @@ export default function Dashboard({ focusedAccount = null }) {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="card-dark p-3 rounded shadow">
               <h4 className="font-medium mb-2">Weekly Trend</h4>
-              <div style={{ width: "100%", height: 180 }}>
-                <ResponsiveContainer>
-                  <AreaChart data={analytics.weekly}>
-                    <XAxis dataKey="week" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="deposit"
-                      stackId="1"
-                      stroke="#10b981"
-                      fill="#bbf7d0"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="withdrawal"
-                      stackId="2"
-                      stroke="#ef4444"
-                      fill="#fecaca"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                <div style={{ width: "100%", height: 180 }}>
+                {RC ? (
+                  <RC.ResponsiveContainer>
+                    <RC.AreaChart data={analytics.weekly}>
+                      <RC.XAxis dataKey="week" />
+                      <RC.YAxis />
+                      <RC.Tooltip />
+                      <RC.Area
+                        type="monotone"
+                        dataKey="deposit"
+                        stackId="1"
+                        stroke="#10b981"
+                        fill="#bbf7d0"
+                      />
+                      <RC.Area
+                        type="monotone"
+                        dataKey="withdrawal"
+                        stackId="2"
+                        stroke="#ef4444"
+                        fill="#fecaca"
+                      />
+                    </RC.AreaChart>
+                  </RC.ResponsiveContainer>
+                ) : (
+                  <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
+                )}
               </div>
             </div>
 
             <div className="card-dark p-3 rounded shadow">
               <h4 className="font-medium mb-2">Yearly Overview</h4>
-              <div style={{ width: "100%", height: 180 }}>
-                <ResponsiveContainer>
-                  <BarChart data={analytics.yearly}>
-                    <XAxis dataKey="year" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="deposit" fill="#10b981" />
-                    <Bar dataKey="withdrawal" fill="#ef4444" />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ width: "100%", height: 180 }}>
+                {RC ? (
+                  <RC.ResponsiveContainer>
+                    <RC.BarChart data={analytics.yearly}>
+                      <RC.XAxis dataKey="year" />
+                      <RC.YAxis />
+                      <RC.Tooltip />
+                      <RC.Bar dataKey="deposit" fill="#10b981" />
+                      <RC.Bar dataKey="withdrawal" fill="#ef4444" />
+                    </RC.BarChart>
+                  </RC.ResponsiveContainer>
+                ) : (
+                  <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
+                )}
               </div>
             </div>
           </div>
@@ -595,26 +636,30 @@ export default function Dashboard({ focusedAccount = null }) {
                 <div className="text-sm text-slate-400 mb-2">No transactions found — showing opening balances across accounts.</div>
               )}
               <div style={{ width: "100%", height: 360 }} className="rounded-md overflow-hidden">
-                <ResponsiveContainer>
-                  <AreaChart data={globalChartSeries}>
-                    <defs>
-                      <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#9ca3af" stopOpacity={0.28} />
-                        <stop offset="100%" stopColor="#020202" stopOpacity={0.06} />
-                      </linearGradient>
-                      <linearGradient id="gradB" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#ffffff" stopOpacity={0.18} />
-                        <stop offset="100%" stopColor="#ffffff" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#0f1720" />
-                    <XAxis dataKey="date" tick={{ fill: "#94a3b8" }} />
-                    <YAxis tick={{ fill: "#94a3b8" }} />
-                    <Tooltip wrapperStyle={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e6eef8" }} />
-                    <Area type="monotone" dataKey="balance" stroke="#e5e7eb" strokeWidth={2} fill="url(#gradA)" dot={false} />
-                    <Area type="monotone" dataKey="balance" stroke="#9ca3af" strokeWidth={1} fill="url(#gradB)" dot={false} opacity={0.6} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {RC ? (
+                  <RC.ResponsiveContainer>
+                    <RC.AreaChart data={globalChartSeries}>
+                      <defs>
+                        <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#9ca3af" stopOpacity={0.28} />
+                          <stop offset="100%" stopColor="#020202" stopOpacity={0.06} />
+                        </linearGradient>
+                        <linearGradient id="gradB" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#ffffff" stopOpacity={0.18} />
+                          <stop offset="100%" stopColor="#ffffff" stopOpacity={0.02} />
+                        </linearGradient>
+                      </defs>
+                      <RC.CartesianGrid strokeDasharray="3 3" stroke="#0f1720" />
+                      <RC.XAxis dataKey="date" tick={{ fill: "#94a3b8" }} />
+                      <RC.YAxis tick={{ fill: "#94a3b8" }} />
+                      <RC.Tooltip wrapperStyle={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e6eef8" }} />
+                      <RC.Area type="monotone" dataKey="balance" stroke="#e5e7eb" strokeWidth={2} fill="url(#gradA)" dot={false} />
+                      <RC.Area type="monotone" dataKey="balance" stroke="#9ca3af" strokeWidth={1} fill="url(#gradB)" dot={false} opacity={0.6} />
+                    </RC.AreaChart>
+                  </RC.ResponsiveContainer>
+                ) : (
+                  <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
+                )}
               </div>
             </div>
 
@@ -622,21 +667,25 @@ export default function Dashboard({ focusedAccount = null }) {
               <h4 className="font-medium mb-2 text-slate-200">Deposits vs Withdrawals</h4>
               <div style={{ width: "100%", height: 240 }}>
                 {accountRows && accountRows.length > 0 ? (
-                  <ResponsiveContainer>
-                    <BarChart
-                      data={accountRows.map((r) => ({
-                        name: r.name,
-                        deposit: r.totalDeposit + r.totalOtherDeposit,
-                        withdrawal: r.totalPenal + r.totalOtherW,
-                      }))}
-                    >
-                      <XAxis dataKey="name" tick={{ fill: "#94a3b8" }} />
-                      <YAxis tick={{ fill: "#94a3b8" }} />
-                      <Tooltip wrapperStyle={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e6eef8" }} />
-                      <Bar dataKey="deposit" fill="#10b981" />
-                      <Bar dataKey="withdrawal" fill="#ef4444" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  RC ? (
+                    <RC.ResponsiveContainer>
+                      <RC.BarChart
+                        data={accountRows.map((r) => ({
+                          name: r.name,
+                          deposit: r.totalDeposit + r.totalOtherDeposit,
+                          withdrawal: r.totalPenal + r.totalOtherW,
+                        }))}
+                      >
+                        <RC.XAxis dataKey="name" tick={{ fill: "#94a3b8" }} />
+                        <RC.YAxis tick={{ fill: "#94a3b8" }} />
+                        <RC.Tooltip wrapperStyle={{ background: "#0b1220", border: "1px solid #1f2937", color: "#e6eef8" }} />
+                        <RC.Bar dataKey="deposit" fill="#10b981" />
+                        <RC.Bar dataKey="withdrawal" fill="#ef4444" />
+                      </RC.BarChart>
+                    </RC.ResponsiveContainer>
+                  ) : (
+                    <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
+                  )
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-slate-400">
                     <div className="text-center">
@@ -653,3 +702,5 @@ export default function Dashboard({ focusedAccount = null }) {
     </div>
   );
 }
+
+export default React.memo(Dashboard);

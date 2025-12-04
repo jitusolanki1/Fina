@@ -1,9 +1,8 @@
-import api, { setAccessToken } from "../api";
+import { fetchJson, setAccessToken } from "../fetchClient";
 
 export async function login(email, password) {
-  const resp = await api.post('/auth/login', { email, password });
-  const data = resp.data || {};
-  if (data.token) {
+  const data = await fetchJson('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+  if (data?.token) {
     setAccessToken(data.token);
     return { ok: true, user: data.user };
   }
@@ -11,9 +10,8 @@ export async function login(email, password) {
 }
 
 export async function register(email, password, name) {
-  const resp = await api.post('/auth/register', { email, password, name });
-  const data = resp.data || {};
-  if (data.token) {
+  const data = await fetchJson('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name }) });
+  if (data?.token) {
     setAccessToken(data.token);
     return { ok: true, user: data.user };
   }
@@ -21,9 +19,8 @@ export async function register(email, password, name) {
 }
 
 export async function refresh() {
-  const resp = await api.post('/auth/refresh');
-  const data = resp.data || {};
-  if (data.token) {
+  const data = await fetchJson('/auth/refresh', { method: 'POST' });
+  if (data?.token) {
     setAccessToken(data.token);
     return { ok: true, token: data.token, user: data.user };
   }
@@ -32,7 +29,7 @@ export async function refresh() {
 
 export async function logout() {
   try {
-    await api.post('/auth/logout');
+    await fetchJson('/auth/logout', { method: 'POST' });
   } catch (e) {}
   setAccessToken(null);
 }

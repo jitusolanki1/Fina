@@ -1,158 +1,132 @@
 import { useEffect, useMemo, useState } from "react";
 import { Trash2, Edit3 } from "lucide-react";
-import api from "../../api";
 import toast from "react-hot-toast";
 import { runningBalances } from "../../utils/logic";
 import { listTransactions, createTransaction, deleteTransaction, updateTransaction } from "../../services/transactionService";
 import { listSummaries } from "../../services/summariesService";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import LoadingButton from '../common-ui/LoadingButton';
 
-export default function AccountSheet({
-  account,
-  onClose,
-  historyRange = null,
-}) {
+export default function AccountSheet({ account, onClose, historyRange = null }) {
   const [rows, setRows] = useState([]);
   const [rawTxs, setRawTxs] = useState([]);
 
   const fmt = (v) => Number(v || 0).toLocaleString();
-  const [form, setForm] = useState({
-    description: "",
-    deposit: "",
-    otherDeposit: "",
-    penalWithdrawal: "",
-    otherWithdrawal: "",
-  });
+  const [form, setForm] = useState({ description: '', deposit: '', otherDeposit: '', upLineDeposit: '', penalWithdrawal: '', otherWithdrawal: '', upLineWithdrawal: '' });
   const [editingCell, setEditingCell] = useState(null);
   const [latest, setLatest] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
 
-  async function load() {
-    try {
-      // If historyRange is provided, load archived transactions for that summaryRange
-      let txs = [];
+  const queryClient = useQueryClient();
+  const txQueryKey = ['transactions', account?.id, historyRange || 'live'];
+
+  const { data: txData = [], isLoading: txLoading, isFetching: txFetching } = useQuery({
+    queryKey: txQueryKey,
+    queryFn: async () => {
+      if (!account || !account.id) return [];
       if (historyRange) {
-        const txsHist = await (await import("../../services/historyService")).listHistory({ summaryRange: historyRange, accountId: account.id, _sort: 'date', _order: 'asc' });
-        txs = txsHist || [];
-      } else {
-        // Fetch live transactions in ascending date order
-        txs = await listTransactions({ accountId: account.id });
+        const historySvc = await import('../../services/historyService');
+        return (await historySvc.listHistory({ summaryRange: historyRange, accountId: account.id, _sort: 'date', _order: 'asc' })) || [];
       }
-      setRawTxs(txs);
-      const withBalances = runningBalances(account.openingBalance, txs);
-      setRows(withBalances);
-      // compute automatic breakdown (group by name/description key)
-      try {
-        const opening = Number(account.openingBalance || 0);
-        const extractKey = (desc) => {
-          if (!desc) return "Unknown";
-          const d = String(desc).trim();
-          const m = d.match(/^([\p{L}0-9 .'-]+?)\s+ne\b/i);
-          if (m) return m[1].trim();
-          const first = d.split(/\s+/)[0];
-          return first || d;
-        };
-        const byKey = {};
-        let totalCr = 0;
-        let totalDr = 0;
-        for (const t of txs) {
-          const key = extractKey(t.description || "");
-          const cr = Number(t.deposit || 0) + Number(t.otherDeposit || 0);
-          const dr = Number(t.penalWithdrawal || 0) + Number(t.otherWithdrawal || 0);
-          if (!byKey[key]) byKey[key] = { key, cr: 0, dr: 0 };
-          byKey[key].cr += cr;
-          byKey[key].dr += dr;
-          totalCr += cr;
-          totalDr += dr;
-        }
-        const rowsB = Object.values(byKey).sort((a, b) => b.cr - a.cr);
-        const closing = opening + totalCr - totalDr;
-        setBreakdown({ opening, rows: rowsB, totalCr, totalDr, closing });
-      } catch (err) {
-        console.error('breakdown compute failed', err);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Could not load transactions");
-    }
+      return (await listTransactions({ accountId: account.id })) || [];
+    },
+    enabled: Boolean(account && account.id),
+  });
 
-    try {
-      const summaries = await listSummaries({ _sort: 'date', _order: 'desc' });
-      for (const s of summaries) {
-        const accSummary = s.perAccount.find(
-          (p) => String(p.accountId) === String(account.id)
-        );
-        if (accSummary) {
-          setLatest(accSummary);
-          break;
-        }
-      }
-    } catch (err) {
-      console.error("Could not load latest summary", err);
-    }
-  }
   useEffect(() => {
-    load();
-  }, [account]);
+    const txs = txData || [];
+    setRawTxs(txs);
+    setRows(runningBalances(account.openingBalance, txs));
 
-  const hasOpeningTx = (rawTxs || []).some((t) =>
-    String(t.description || "")
-      .toLowerCase()
-      .includes("opening")
-  );
+    // compute breakdown
+    try {
+      const opening = Number(account.openingBalance || 0);
+      const extractKey = (desc) => {
+        if (!desc) return 'Unknown';
+        const d = String(desc).trim();
+        const m = d.match(/^([\p{L}0-9 .'-]+?)\s+ne\b/i);
+        if (m) return m[1].trim();
+        const first = d.split(/\s+/)[0];
+        return first || d;
+      };
+      const byKey = {};
+      let totalCr = 0; let totalDr = 0;
+      for (const t of txs) {
+        const key = extractKey(t.description || '');
+        const cr = Number(t.deposit || 0) + Number(t.otherDeposit || 0) + Number(t.upLineDeposit || 0);
+        const dr = Number(t.penalWithdrawal || 0) + Number(t.otherWithdrawal || 0) + Number(t.upLineWithdrawal || 0);
+        if (!byKey[key]) byKey[key] = { key, cr: 0, dr: 0 };
+        byKey[key].cr += cr; byKey[key].dr += dr;
+        totalCr += cr; totalDr += dr;
+      }
+      const rowsB = Object.values(byKey).sort((a, b) => b.cr - a.cr);
+      const closing = opening + totalCr - totalDr;
+      setBreakdown({ opening, rows: rowsB, totalCr, totalDr, closing });
+    } catch (err) {
+      console.error('breakdown compute failed', err);
+    }
 
-  const openingRow = !hasOpeningTx
-    ? (() => {
-        const ob = Number(account.openingBalance || 0);
-        return (
-          <tr key="__opening" className="border-t border-[#1f2937]">
-            <td className="p-2">{new Date().toISOString().slice(0, 10)}</td>
-            <td className="p-2">Opening Balance</td>
-            <td className="p-2 text-center">{ob}</td>
-            <td className="p-2 text-center">0</td>
-            <td className="p-2 text-center">0</td>
-            <td className="p-2 text-center">0</td>
-            <td className="p-2 font-medium text-slate-100 text-center">{ob}</td>
-            <td className="p-2 text-center">&nbsp;</td>
-          </tr>
-        );
-      })()
-    : null;
+    // load summaries
+    (async () => {
+      try {
+        const summaries = await listSummaries({ _sort: 'date', _order: 'desc' });
+        for (const s of summaries) {
+          const accSummary = s.perAccount.find((p) => String(p.accountId) === String(account.id));
+          if (accSummary) { setLatest(accSummary); break; }
+        }
+      } catch (err) {
+        console.error('Could not load latest summary', err);
+      }
+    })();
+  }, [txData, account]);
+
+  const createMutation = useMutation((payload) => createTransaction(payload), { onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }), onError: () => toast.error('Could not add transaction') });
+  const updateMutation = useMutation(({ id, patch }) => updateTransaction(id, patch), { onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }), onError: () => toast.error('Could not update transaction') });
+  const deleteMutation = useMutation((id) => deleteTransaction(id), { onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }), onError: () => toast.error('Could not delete transaction') });
+
+  const hasOpeningTx = (rawTxs || []).some((t) => String(t.description || '').toLowerCase().includes('opening'));
+
+  const openingRow = !hasOpeningTx ? (() => {
+    const ob = Number(account.openingBalance || 0);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    return (
+      <tr key="__opening" className="border-t border-[#1f2937]">
+        <td className="p-2">{dateStr}</td>
+        <td className="p-2">Opening Balance</td>
+        <td className="p-2 text-center">{ob}</td>
+        <td className="p-2 text-center">0</td>
+        <td className="p-2 text-center">0</td>
+        <td className="p-2 text-center">0</td>
+        <td className="p-2 text-center">0</td>
+        <td className="p-2 text-center">0</td>
+        <td className="p-2 font-medium text-slate-100 text-center">{ob}</td>
+        <td className="p-2 text-center">&nbsp;</td>
+      </tr>
+    );
+  })() : null;
 
   async function addTx(e) {
     e.preventDefault();
-    try {
-      await createTransaction({
-        accountId: account.id,
-        description: form.description,
-        deposit: Number(form.deposit) || 0,
-        otherDeposit: Number(form.otherDeposit) || 0,
-
-        penalWithdrawal: Number(form.penalWithdrawal) || 0,
-        otherWithdrawal: Number(form.otherWithdrawal) || 0,
-        date: new Date().toISOString().slice(0, 10),
-      });
-      toast.success("Transaction added");
-      setForm({
-        description: "",
-        deposit: "",
-
-        otherDeposit: "",
-        penalWithdrawal: "",
-        otherWithdrawal: "",
-      });
-      load();
-    } catch (err) {
-      console.error(err);
-      toast.error("Could not add transaction");
-    }
+    await createMutation.mutateAsync({
+      accountId: account.id,
+      description: form.description,
+      deposit: Number(form.deposit) || 0,
+      otherDeposit: Number(form.otherDeposit) || 0,
+      upLineDeposit: Number(form.upLineDeposit) || 0,
+      penalWithdrawal: Number(form.penalWithdrawal) || 0,
+      otherWithdrawal: Number(form.otherWithdrawal) || 0,
+      upLineWithdrawal: Number(form.upLineWithdrawal) || 0,
+      date: new Date().toISOString().slice(0, 10),
+    });
+    setForm({ description: '', deposit: '', otherDeposit: '', upLineDeposit: '', penalWithdrawal: '', otherWithdrawal: '', upLineWithdrawal: '' });
+    toast.success('Transaction added');
   }
+
+  const anyLoading = txLoading || txFetching || createMutation.isLoading || updateMutation.isLoading || deleteMutation.isLoading;
 
   return (
     <div className="">
-      <div
-        className="card-dark p-4 rounded"
-        style={{ maxHeight: "calc(100vh - 200px)", overflow: "auto" }}
-      >
+      <div className="card-dark p-4 rounded" style={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
         <div className="flex justify-between items-center mb-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-100">
@@ -243,9 +217,9 @@ export default function AccountSheet({
         {/* hide add form when viewing archived history */}
         {!historyRange && (
           <form
-            onSubmit={addTx}
-            className="grid grid-cols-1 md:grid-cols-6 gap-2 mb-4 add-form items-end"
-          >
+              onSubmit={addTx}
+              className="grid grid-cols-1 md:grid-cols-8 gap-2 mb-4 add-form items-end"
+            >
             <div className="md:col-span-3">
               <input
                 placeholder="Description"
@@ -279,6 +253,17 @@ export default function AccountSheet({
             <div className="md:col-span-1">
               <input
                 type="number"
+                placeholder="UpLine Deposit"
+                value={form.upLineDeposit}
+                onChange={(e) =>
+                  setForm({ ...form, upLineDeposit: e.target.value })
+                }
+                className="bg-[#0A0A0A] border border-[#1f2937] p-2 w-full text-slate-200 rounded"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <input
+                type="number"
                 placeholder="Penal Withdrawal"
                 value={form.penalWithdrawal}
                 onChange={(e) =>
@@ -298,13 +283,19 @@ export default function AccountSheet({
                 className="bg-[#0A0A0A] border border-[#1f2937] p-2 w-full text-slate-200 rounded"
               />
             </div>
+            <div className="md:col-span-1">
+              <input
+                type="number"
+                placeholder="UpLine Withdrawal"
+                value={form.upLineWithdrawal}
+                onChange={(e) =>
+                  setForm({ ...form, upLineWithdrawal: e.target.value })
+                }
+                className="bg-[#0A0A0A] border border-[#1f2937] p-2 w-full text-slate-200 rounded"
+              />
+            </div>
             <div className="md:col-span-6 flex justify-end">
-              <button
-                className="btn-primary bg-blue-700 p-2 rounded-md"
-                type="submit"
-              >
-                Add Transaction
-              </button>
+              <LoadingButton loading={createMutation.isLoading} className="btn-primary bg-blue-700 p-2 rounded-md" type="submit">Add Transaction</LoadingButton>
             </div>
           </form>
         )}
@@ -327,20 +318,26 @@ export default function AccountSheet({
                 <th className="p-2" style={{ width: "12%" }}>
                   Date
                 </th>
-                <th className="p-2" style={{ width: "36%" }}>
+                <th className="p-2" style={{ width: "32%" }}>
                   Desc
                 </th>
-                <th className="p-2" style={{ width: "10%" }}>
+                <th className="p-2" style={{ width: "9%" }}>
                   Deposit
                 </th>
-                <th className="p-2" style={{ width: "10%" }}>
+                <th className="p-2" style={{ width: "9%" }}>
                   Other Dep
                 </th>
-                <th className="p-2" style={{ width: "10%" }}>
+                <th className="p-2" style={{ width: "9%" }}>
+                  UpLine Dep
+                </th>
+                <th className="p-2" style={{ width: "9%" }}>
                   Penal W
                 </th>
-                <th className="p-2" style={{ width: "10%" }}>
+                <th className="p-2" style={{ width: "9%" }}>
                   Other W
+                </th>
+                <th className="p-2" style={{ width: "9%" }}>
+                  UpLine W
                 </th>
                 <th className="p-2" style={{ width: "12%" }}>
                   Balance
@@ -350,11 +347,11 @@ export default function AccountSheet({
                 </th>
               </tr>
             </thead>
-            <tbody>
+              <tbody>
               {openingRow}
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-[#1f2937]">
-                  <td className="p-2">{r.date}</td>
+                  <td className="p-2">{r.date || '—'}</td>
                   <td
                     className="p-2"
                     onDoubleClick={() =>
@@ -379,9 +376,8 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await updateTransaction(r.id, { description: editingCell.value });
+                            await updateMutation.mutateAsync({ id: r.id, patch: { description: editingCell.value } });
                             setEditingCell(null);
-                            load();
                           } catch (err) {
                             console.error(err);
                           }
@@ -420,9 +416,8 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await updateTransaction(r.id, { deposit: Number(editingCell.value) });
+                            await updateMutation.mutateAsync({ id: r.id, patch: { deposit: Number(editingCell.value) } });
                             setEditingCell(null);
-                            load();
                           } catch (err) {
                             console.error(err);
                           }
@@ -461,9 +456,8 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await updateTransaction(r.id, { otherDeposit: Number(editingCell.value) });
+                            await updateMutation.mutateAsync({ id: r.id, patch: { otherDeposit: Number(editingCell.value) } });
                             setEditingCell(null);
-                            load();
                           } catch (err) {
                             console.error(err);
                           }
@@ -476,6 +470,46 @@ export default function AccountSheet({
                       />
                     ) : (
                       fmt(r.otherDeposit)
+                    )}
+                  </td>
+                  <td
+                    className="p-2 num-col"
+                    onDoubleClick={() =>
+                      setEditingCell({
+                        id: r.id,
+                        field: "upLineDeposit",
+                        value: r.upLineDeposit,
+                      })
+                    }
+                  >
+                    {editingCell &&
+                    editingCell.id === r.id &&
+                    editingCell.field === "upLineDeposit" ? (
+                      <input
+                        type="number"
+                        value={editingCell.value}
+                        onChange={(e) =>
+                          setEditingCell((s) => ({
+                            ...s,
+                            value: e.target.value,
+                          }))
+                        }
+                        onBlur={async (e) => {
+                          try {
+                            await updateMutation.mutateAsync({ id: r.id, patch: { upLineDeposit: Number(editingCell.value) } });
+                            setEditingCell(null);
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.target.blur();
+                        }}
+                        autoFocus
+                        className="bg-[#0A0A0A] border border-[#1f2937] p-1 w-24 text-slate-200 rounded text-center"
+                      />
+                    ) : (
+                      fmt(r.upLineDeposit)
                     )}
                   </td>
                   <td
@@ -502,9 +536,8 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await updateTransaction(r.id, { penalWithdrawal: Number(editingCell.value) });
+                            await updateMutation.mutateAsync({ id: r.id, patch: { penalWithdrawal: Number(editingCell.value) } });
                             setEditingCell(null);
-                            load();
                           } catch (err) {
                             console.error(err);
                           }
@@ -543,9 +576,8 @@ export default function AccountSheet({
                         }
                         onBlur={async (e) => {
                           try {
-                            await updateTransaction(r.id, { otherWithdrawal: Number(editingCell.value) });
+                            await updateMutation.mutateAsync({ id: r.id, patch: { otherWithdrawal: Number(editingCell.value) } });
                             setEditingCell(null);
-                            load();
                           } catch (err) {
                             console.error(err);
                           }
@@ -558,6 +590,46 @@ export default function AccountSheet({
                       />
                     ) : (
                       fmt(r.otherWithdrawal)
+                    )}
+                  </td>
+                  <td
+                    className="p-2 num-col"
+                    onDoubleClick={() =>
+                      setEditingCell({
+                        id: r.id,
+                        field: "upLineWithdrawal",
+                        value: r.upLineWithdrawal,
+                      })
+                    }
+                  >
+                    {editingCell &&
+                    editingCell.id === r.id &&
+                    editingCell.field === "upLineWithdrawal" ? (
+                      <input
+                        type="number"
+                        value={editingCell.value}
+                        onChange={(e) =>
+                          setEditingCell((s) => ({
+                            ...s,
+                            value: e.target.value,
+                          }))
+                        }
+                        onBlur={async (e) => {
+                          try {
+                            await updateMutation.mutateAsync({ id: r.id, patch: { upLineWithdrawal: Number(editingCell.value) } });
+                            setEditingCell(null);
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.target.blur();
+                        }}
+                        autoFocus
+                        className="bg-[#0A0A0A] border border-[#1f2937] p-1 w-24 text-slate-200 rounded text-center"
+                      />
+                    ) : (
+                      fmt(r.upLineWithdrawal)
                     )}
                   </td>
                   <td className="p-2 balance-cell num-col">{fmt(r.balance)}</td>
@@ -580,14 +652,12 @@ export default function AccountSheet({
                           </button>
                           <button
                             onClick={async () => {
-                              if (!confirm("Delete this transaction?")) return;
+                              if (!confirm('Delete this transaction?')) return;
                               try {
-                                await deleteTransaction(r.id);
-                                toast.success("Transaction deleted");
-                                load();
+                                await deleteMutation.mutateAsync(r.id);
+                                toast.success('Transaction deleted');
                               } catch (err) {
                                 console.error(err);
-                                toast.error("Delete failed");
                               }
                             }}
                             className="px-2 py-1 bg-transparent hover:bg-[#221515] rounded"

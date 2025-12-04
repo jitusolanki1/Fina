@@ -45,6 +45,10 @@ router.post(
     res.cookie("refreshToken", refreshToken, cookieOptions);
     // in non-production include refresh token in body as a fallback for clients
     const responseBody = { token: accessToken, user: { id: u._id, email: u.email, name: u.name } };
+    // In development include refresh token in body as a fallback for clients
+    if (process.env.NODE_ENV !== 'production') {
+      responseBody.refreshToken = refreshToken;
+    }
     res.json(responseBody);
   })
 );
@@ -75,6 +79,9 @@ router.post(
     } catch (e) {}
     res.cookie("refreshToken", refreshToken, cookieOptions);
     const responseBody = { token: accessToken, user: { id: u._id, email: u.email, name: u.name } };
+    if (process.env.NODE_ENV !== 'production') {
+      responseBody.refreshToken = refreshToken;
+    }
     res.json(responseBody);
   })
 );

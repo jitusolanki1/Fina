@@ -8,8 +8,10 @@ const PerAccountSchema = new mongoose.Schema({
   txCount: Number,
   deposit: Number,
   otherDeposit: Number,
+  upLineDeposit: Number,
   penalWithdrawal: Number,
   otherWithdrawal: Number,
+  upLineWithdrawal: Number,
   net: Number,
   openingAfter: Number,
 }, { _id: false });

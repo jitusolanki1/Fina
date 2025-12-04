@@ -1,4 +1,4 @@
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 import { listAccounts, updateAccount } from "../services/accountsService";
 import { listTransactions, deleteTransaction } from "../services/transactionService";
 import { createSummary, listSummaries, getSummary, deleteSummary } from "../services/summariesService";
@@ -53,8 +53,10 @@ export async function previewSummaryRange(start, end) {
     openingTotal: 0,
     deposit: 0,
     otherDeposit: 0,
+    upLineDeposit: 0,
     penalWithdrawal: 0,
     otherWithdrawal: 0,
+    upLineWithdrawal: 0,
     closingTotal: 0,
   };
 
@@ -66,6 +68,10 @@ export async function previewSummaryRange(start, end) {
       (s, t) => s + Number(t.otherDeposit || 0),
       0
     );
+    const upLineDeposit = list.reduce(
+      (s, t) => s + Number(t.upLineDeposit || 0),
+      0
+    );
     const penalWithdrawal = list.reduce(
       (s, t) => s + Number(t.penalWithdrawal || 0),
       0
@@ -74,9 +80,13 @@ export async function previewSummaryRange(start, end) {
       (s, t) => s + Number(t.otherWithdrawal || 0),
       0
     );
+    const upLineWithdrawal = list.reduce(
+      (s, t) => s + Number(t.upLineWithdrawal || 0),
+      0
+    );
 
     const openingBefore = Number(acc.openingBalance || 0);
-    const net = deposit + otherDeposit - penalWithdrawal - otherWithdrawal;
+    const net = deposit + otherDeposit + upLineDeposit - penalWithdrawal - otherWithdrawal - upLineWithdrawal;
     const openingAfter = openingBefore + net;
 
     perAccount.push({
@@ -86,8 +96,10 @@ export async function previewSummaryRange(start, end) {
       txCount: list.length,
       deposit,
       otherDeposit,
+      upLineDeposit,
       penalWithdrawal,
       otherWithdrawal,
+      upLineWithdrawal,
       net,
       openingAfter,
     });
@@ -95,8 +107,10 @@ export async function previewSummaryRange(start, end) {
     overall.openingTotal += openingBefore;
     overall.deposit += deposit;
     overall.otherDeposit += otherDeposit;
+    overall.upLineDeposit += upLineDeposit;
     overall.penalWithdrawal += penalWithdrawal;
     overall.otherWithdrawal += otherWithdrawal;
+    overall.upLineWithdrawal += upLineWithdrawal;
     overall.closingTotal += openingAfter;
   }
 
@@ -257,11 +271,11 @@ export async function undoSummary(summaryId) {
       delete toRestore.archivedAt;
       delete toRestore.summaryRange;
         try {
-        await api.post("/transactions", toRestore);
-        await deleteHistory(h.id);
-      } catch (err) {
-        console.error("restore history tx", err);
-      }
+          await fetchJson('/transactions', { method: 'POST', body: JSON.stringify(toRestore) });
+          await deleteHistory(h.id);
+        } catch (err) {
+          console.error('restore history tx', err);
+        }
     }
 
     try {
@@ -280,12 +294,12 @@ export async function undoSummary(summaryId) {
     try {
       await updateAccount(accId, { openingBalance: pa.openingBefore });
     } catch (err) {
-      console.error("revert openingBalance", err);
+      console.error('revert openingBalance', err);
     }
   }
 
   try {
-    await api.delete(`/summaries/${summaryId}`);
+    await fetchJson(`/summaries/${summaryId}`, { method: 'DELETE' });
   } catch (err) {
     console.error("delete summary", err);
   }

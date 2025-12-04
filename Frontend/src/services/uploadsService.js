@@ -1,8 +1,7 @@
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 
 export async function presignUpload(filename, contentType) {
-  const r = await api.post('/uploads/presign', { filename, contentType });
-  return r.data;
+  return await fetchJson('/uploads/presign', { method: 'POST', body: JSON.stringify({ filename, contentType }) });
 }
 
 export async function putToUploadUrl(uploadUrl, blob) {

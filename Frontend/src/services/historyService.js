@@ -1,16 +1,14 @@
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 
 export async function listHistory(query = {}) {
-  const r = await api.get("/transactionsHistory", { params: query });
-  return r.data;
+  const qs = query && Object.keys(query).length ? `?${new URLSearchParams(query).toString()}` : '';
+  return await fetchJson(`/transactionsHistory${qs}`) || [];
 }
 
 export async function createHistory(payload) {
-  const r = await api.post("/transactionsHistory", payload);
-  return r.data;
+  return await fetchJson('/transactionsHistory', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function deleteHistory(id) {
-  const r = await api.delete(`/transactionsHistory/${id}`);
-  return r.data;
+  return await fetchJson(`/transactionsHistory/${id}`, { method: 'DELETE' });
 }

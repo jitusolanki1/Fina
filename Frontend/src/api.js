@@ -1,71 +1,19 @@
-import axios from "axios";
-import BASE_URL from "./api/helper";
+// Lightweight compatibility wrapper that re-exports the fetchClient API in an axios-like shape.
+import { fetchJson, setAccessToken as _setAccessToken } from "./fetchClient";
 
-const api = axios.create({
-  baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true,
-});
-
-let accessToken = null;
 export function setAccessToken(token) {
-  accessToken = token;
-  if (token) api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-  else delete api.defaults.headers.common["Authorization"];
+  return _setAccessToken(token);
 }
 
-let isRefreshing = false;
-let refreshQueue = [];
-
-async function tryRefresh() {
-  try {
-    const r = await api.post("/auth/refresh");
-    const data = r.data || {};
-    if (data.token) {
-      setAccessToken(data.token);
-      return data.token;
-    }
-  } catch (err) {
-    // swallow
-  }
-  return null;
+function wrapResp(data) {
+  return { data };
 }
 
-api.interceptors.response.use(
-  (resp) => resp,
-  async (err) => {
-    const original = err.config;
-    if (!original || original._retry) return Promise.reject(err);
-    if (err.response && err.response.status === 401) {
-      original._retry = true;
-      if (!isRefreshing) {
-        isRefreshing = true;
-        const newToken = await tryRefresh();
-        isRefreshing = false;
-        // resume queued
-        refreshQueue.forEach((cb) => cb(newToken));
-        refreshQueue = [];
-        if (newToken) {
-          original.headers["Authorization"] = `Bearer ${newToken}`;
-          return api(original);
-        }
-        return Promise.reject(err);
-      }
-
-      // if a refresh is already in progress, queue the request
-      return new Promise((resolve, reject) => {
-        refreshQueue.push((token) => {
-          if (token) {
-            original.headers["Authorization"] = `Bearer ${token}`;
-            resolve(api(original));
-          } else {
-            reject(err);
-          }
-        });
-      });
-    }
-    return Promise.reject(err);
-  }
-);
+const api = {
+  get: (path, opts) => fetchJson(path, { method: 'GET', ...(opts || {}) }).then((d) => wrapResp(d)),
+  post: (path, body, opts) => fetchJson(path, { method: 'POST', body: JSON.stringify(body), ...(opts || {}) }).then((d) => wrapResp(d)),
+  patch: (path, body, opts) => fetchJson(path, { method: 'PATCH', body: JSON.stringify(body), ...(opts || {}) }).then((d) => wrapResp(d)),
+  delete: (path, opts) => fetchJson(path, { method: 'DELETE', ...(opts || {}) }).then((d) => wrapResp(d)),
+};
 
 export default api;

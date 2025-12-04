@@ -13,9 +13,8 @@ import {
 import { sendSummaryViaFormspree } from "../utils/sendSummaryForm";
 import toast from "react-hot-toast";
 import SummaryDetail from "../components/SummaryDetail";
-import api from "../api";
 
-export default function Summaries() {
+function Summaries() {
   const [summaries, setSummaries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -569,3 +568,5 @@ export default function Summaries() {
     </div>
   );
 }
+
+export default React.memo(Summaries);

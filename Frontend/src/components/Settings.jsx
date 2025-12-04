@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAuth } from '../auth/AuthProvider';
+import fetchClient from '../fetchClient';
 
 const Settings = () => {
   const [settings, setSettings] = useState({
@@ -8,10 +10,28 @@ const Settings = () => {
     language: 'en',
     autoSave: true,
   });
+  const { user, token } = useAuth();
+  const [githubToken, setGithubToken] = useState('');
+  const [githubStatus, setGithubStatus] = useState(null);
+  const [committing, setCommitting] = useState(false);
+  const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Kolkata');
+  const [autoCommit, setAutoCommit] = useState(user?.autoCommit ?? true);
+  const [commitTime, setCommitTime] = useState(user?.commitTime || '00:00');
 
   const handleSettingChange = (key, value) => {
     setSettings({ ...settings, [key]: value });
   };
+
+  async function saveSettings() {
+    if (!user || !user.email) return alert('Please login first');
+    try {
+      const payload = { email: user.email, timezone, autoCommit, commitTime };
+      const res = await fetchClient.fetchJson('/settings/update-settings', { method: 'POST', body: JSON.stringify(payload) });
+      alert('Settings saved');
+    } catch (e) {
+      alert('Save failed: ' + (e?.message || e));
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -131,10 +151,90 @@ const Settings = () => {
           </div>
 
           {/* Save Button */}
+          <div className="pt-6 border-t border-gray-200 dark:border-dark-700 space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">Timezone</label>
+                <input value={timezone} onChange={(e) => setTimezone(e.target.value)} className="w-full px-3 py-2 border rounded" />
+                <p className="text-xs text-gray-500 mt-1">IANA timezone (e.g. Asia/Kolkata)</p>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">Auto Commit</label>
+                <label className="inline-flex items-center">
+                  <input type="checkbox" checked={autoCommit} onChange={(e) => setAutoCommit(e.target.checked)} className="mr-2" /> Enable
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-700 mb-2">Commit Time (HH:mm)</label>
+                <input value={commitTime} onChange={(e) => setCommitTime(e.target.value)} className="w-full px-3 py-2 border rounded" />
+              </div>
+            </div>
+
+            <div>
+              <button onClick={saveSettings} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium">Save Settings</button>
+            </div>
+          </div>
+
+          {/* GitHub Integration */}
           <div className="pt-6 border-t border-gray-200 dark:border-dark-700">
-            <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium">
-              Save Settings
-            </button>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">GitHub Integration</h3>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500 dark:text-dark-400">Connect your GitHub account to automatically push daily summaries to a private repo named <code>Fina</code>.</p>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-300 mb-2">Personal Access Token (PAT)</label>
+                  <input value={githubToken} onChange={(e) => setGithubToken(e.target.value)} placeholder="ghp_xxx..." className="w-full px-3 py-2 border border-gray-300 dark:border-dark-600 rounded-lg bg-white dark:bg-dark-700 text-gray-900 dark:text-white" />
+                  <p className="text-xs text-gray-500 mt-1">Requires <code>repo</code> scope for private repo access. You can also connect via OAuth below.</p>
+                  <div className="mt-2">
+                    <button onClick={async () => {
+                      if (!user || !user.email) return alert('Please login first');
+                      try {
+                        setGithubStatus(null);
+                        const res = await fetchClient.fetchJson('/settings/github/pat', { method: 'POST', body: JSON.stringify({ email: user.email, token: githubToken }) });
+                        setGithubStatus({ ok: true, msg: res.msg, username: res.username, repo: res.repo });
+                      } catch (e) {
+                        setGithubStatus({ ok: false, msg: e?.body?.msg || e.message || 'Failed' });
+                      }
+                    }} className="mt-2 px-4 py-2 bg-green-600 text-white rounded">Save PAT</button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-dark-300 mb-2">Or Connect via OAuth</label>
+                  <p className="text-sm text-gray-500 dark:text-dark-400">This opens GitHub to authorize the app. Requires a registered OAuth application on the backend.</p>
+                  {/* Open backend OAuth connect endpoint (use Vite env or fallback to localhost backend) */}
+                  {
+                    (() => {
+                      const backendRoot = (import.meta.env.VITE_API_URL || (process.env.NODE_ENV === 'production' ? 'https://fina-nbnq.onrender.com/api' : 'http://localhost:4000/api')).replace(/\/api\/?$/i, '');
+                      return (
+                        <a href={`${backendRoot}/auth/github/connect`} target="_blank" rel="noreferrer" className="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded">Connect with GitHub</a>
+                      );
+                    })()
+                  }
+                </div>
+              </div>
+
+              {githubStatus && (
+                <div className={`p-3 rounded ${githubStatus.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
+                  {githubStatus.ok ? `Connected: ${githubStatus.username} (repo: ${githubStatus.repo})` : `Error: ${githubStatus.msg}`}
+                </div>
+              )}
+
+              <div className="pt-4">
+                <button onClick={async () => {
+                  if (!user) return alert('login required');
+                  setCommitting(true);
+                  try {
+                    const r = await fetchClient.fetchJson('/commit/manual', { method: 'POST' });
+                    alert(`Manual commit: pushed ${r.pushed} files`);
+                  } catch (e) {
+                    alert('Manual commit failed: ' + (e?.body?.msg || e.message));
+                  } finally { setCommitting(false); }
+                }} className="px-4 py-2 bg-indigo-600 text-white rounded" disabled={committing}>{committing ? 'Pushing...' : 'Manual Push Now'}</button>
+                <p className="text-xs text-gray-500 mt-2">Scheduled automatic push runs at the time configured below (local timezone).</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

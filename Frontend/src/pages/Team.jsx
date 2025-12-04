@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import api from '../api';
+import React, { useEffect, useState, useCallback } from 'react';
+import { fetchJson } from '../fetchClient';
 import { MoreHorizontal, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -8,7 +8,7 @@ function Avatar({name}){
   return <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-sm font-semibold">{initials}</div>
 }
 
-export default function Team(){
+function Team(){
   const [users, setUsers] = useState([]);
   const [q, setQ] = useState('');
   const [page, setPage] = useState(1);
@@ -16,20 +16,21 @@ export default function Team(){
   const [form, setForm] = useState({name:'', email:'', teams:'', role:'Member'});
   const per = 8;
 
-  useEffect(()=>{ load(); }, []);
-  async function load(){
+  const load = useCallback(async () => {
     try{
-      const res = await api.get('/users');
-      setUsers(res.data || []);
+      const res = await fetchJson('/users');
+      setUsers(res || []);
     }catch(e){ console.error(e); toast.error('Could not load users'); }
-  }
+  }, []);
+
+  useEffect(()=>{ load(); }, [load]);
 
   const filtered = users.filter(u=> (u.name||'').toLowerCase().includes(q.toLowerCase()) || (u.email||'').toLowerCase().includes(q.toLowerCase()));
   const total = filtered.length;
   const pages = Math.max(1, Math.ceil(total / per));
   const pageItems = filtered.slice((page-1)*per, page*per);
 
-  function downloadCSV(){
+  const downloadCSV = useCallback(() => {
     const cols = ['Name','Email','Date added','Last login','Teams','Role'];
     const rows = users.map(u=>[u.name, u.email, u.dateAdded || '', u.lastLogin || '', (u.teams||[]).join('; '), u.role || '']);
     let csv = cols.join(',') + '\n' + rows.map(r=> r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -37,19 +38,19 @@ export default function Team(){
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = 'team.csv'; a.click(); URL.revokeObjectURL(url);
-  }
+  }, [users]);
 
-  async function handleAdd(e){
+  const handleAdd = useCallback(async (e) => {
     e.preventDefault();
     if(!form.name || !form.email) return toast.error('Name and email required');
     try{
       const newUser = { id: `u${Date.now()}`, name: form.name, email: form.email, dateAdded: new Date().toISOString().slice(0,10), lastLogin: new Date().toISOString().slice(0,10), teams: form.teams ? form.teams.split(',').map(s=>s.trim()).filter(Boolean): [], role: form.role };
-      await api.post('/users', newUser);
+      await fetchJson('/users', { method: 'POST', body: JSON.stringify(newUser) });
       toast.success('Member added');
       setShowAdd(false); setForm({name:'',email:'',teams:'',role:'Member'});
       load();
     }catch(err){ console.error(err); toast.error('Could not add member'); }
-  }
+  }, [form, load]);
 
   return (
     <div>
@@ -160,3 +161,5 @@ export default function Team(){
     </div>
   )
 }
+
+export default React.memo(Team);

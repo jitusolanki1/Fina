@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import path from "path";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 import authRoutes from "./routes/auth.js";
 import accountsRoutes from "./routes/accounts.js";
@@ -15,26 +15,36 @@ import summariesRoutes from "./routes/summaries.js";
 import uploadsRoutes from "./routes/uploads.js";
 import errorHandler from "./middleware/errorHandler.js";
 import decryptDate from "./middleware/decryptDate.js";
+import settingsRoute from "./routes/settings.js";
+import manualCommitRoute from "./routes/manualCommit.js";
+import authGithubRoutes from "./routes/authGithub.js";
+
+import { startScheduler } from "./services/schedulerService.js";
 
 dotenv.config();
 
 const app = express();
 
 // Disable ETag generation for API responses to avoid automatic 304 Not Modified
-app.set('etag', false);
+app.set("etag", false);
 
 // For all API routes, send no-cache headers so clients receive fresh content
-app.use('/api', (req, res, next) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.setHeader('Expires', '0');
+app.use("/api", (req, res, next) => {
+  res.setHeader(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate"
+  );
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   next();
 });
 
 // Configure CORS to allow requests (with credentials) from the frontend origins.
 // Provide a comma-separated list in env var FRONTEND_ORIGINS, or default to localhost and Netlify preview.
 const defaultOrigins = "http://localhost:5173,https://finaa-app.netlify.app";
-const allowedOrigins = (process.env.FRONTEND_ORIGINS || defaultOrigins).split(",").map((s) => s.trim());
+const allowedOrigins = (process.env.FRONTEND_ORIGINS || defaultOrigins)
+  .split(",")
+  .map((s) => s.trim());
 
 app.use(
   cors({
@@ -53,7 +63,7 @@ app.use((req, res, next) => {
   try {
     const id = uuidv4();
     req.requestId = id;
-    res.setHeader('X-Request-Id', id);
+    res.setHeader("X-Request-Id", id);
   } catch (e) {}
   next();
 });
@@ -68,7 +78,7 @@ app.use(
 
 app.use(decryptDate);
 
-const MONGO_URI = process.env.MONGO_URI ;
+const MONGO_URI = process.env.MONGO_URI;
 mongoose.set("strictQuery", false);
 // small helper to mask credentials when printing the connection string
 function maskMongoUri(uri) {
@@ -85,7 +95,11 @@ console.log("Connecting to MongoDB (masked):", maskMongoUri(MONGO_URI));
 
 mongoose
   .connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("Mongoose connected"))
+  .then(() => {
+    console.log("Mongoose connected to MongoDB");
+    // start any background services once DB is connected
+    startScheduler();
+  })
   .catch((err) => console.error("Mongoose connection error:", err.message));
 
 // try to also connect with native MongoClient helper (optional)
@@ -101,6 +115,9 @@ app.use("/api/transactions", transactionsRoutes);
 app.use("/api/transactionsHistory", historyRoutes);
 app.use("/api/summaries", summariesRoutes);
 app.use("/api/uploads", uploadsRoutes);
+app.use("/api/settings", settingsRoute);
+app.use("/api/commit", manualCommitRoute);
+app.use("/auth/github", authGithubRoutes);
 
 app.use(errorHandler);
 

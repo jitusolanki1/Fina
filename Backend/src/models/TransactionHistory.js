@@ -6,8 +6,10 @@ const TransactionHistorySchema = new mongoose.Schema({
   date: { type: String },
   deposit: { type: Number, default: 0 },
   otherDeposit: { type: Number, default: 0 },
+  upLineDeposit: { type: Number, default: 0 },
   penalWithdrawal: { type: Number, default: 0 },
   otherWithdrawal: { type: Number, default: 0 },
+  upLineWithdrawal: { type: Number, default: 0 },
   archivedAt: { type: Date },
   summaryRange: { type: String },
 }, { timestamps: true });

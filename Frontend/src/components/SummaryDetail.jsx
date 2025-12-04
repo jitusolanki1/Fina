@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ArrowLeft, GripVertical } from "lucide-react";
 import AccountSheet from "./account/AccountSheet";
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 
 function NumberCell({ v }) {
   return (
@@ -11,9 +11,7 @@ function NumberCell({ v }) {
   );
 }
 
-export default function SummaryDetail({ summary, aggregate, onBack }) {
-  // summary: single daily summary object
-  // aggregate: { overall, perAccount, perDate } for multi-day
+function SummaryDetail({ summary, aggregate, onBack }) {
   const perAccount = aggregate
     ? aggregate.perAccount
     : summary?.perAccount || [];
@@ -23,13 +21,10 @@ export default function SummaryDetail({ summary, aggregate, onBack }) {
   const [selectedRange, setSelectedRange] = useState(null);
 
   async function openAccountHistory(accountId, accountName, openingBefore) {
-    // the summary.date (e.g. "2025-11-27 → 2025-11-27") is used as the summaryRange key
     const range = summary?.date || null;
     try {
-      // only fetch when we have a valid accountId; otherwise fall back
       if (accountId) {
-        const res = await api.get(`/accounts/${accountId}`);
-        const acct = res.data || {
+        const acct = (await fetchJson(`/accounts/${accountId}`)) || {
           id: accountId,
           name: accountName,
           openingBalance: openingBefore,
@@ -37,7 +32,6 @@ export default function SummaryDetail({ summary, aggregate, onBack }) {
         setSelectedAccount(acct);
         setSelectedRange(range);
       } else {
-        // no account id available — use summary values
         setSelectedAccount({
           id: accountId,
           name: accountName,
@@ -46,7 +40,6 @@ export default function SummaryDetail({ summary, aggregate, onBack }) {
         setSelectedRange(range);
       }
     } catch (err) {
-      // fallback to using summary values
       setSelectedAccount({
         id: accountId,
         name: accountName,
@@ -91,11 +84,23 @@ export default function SummaryDetail({ summary, aggregate, onBack }) {
           </div>
         </div>
         <div className="p-4 rounded border card-dark">
+          <div className="text-xs text-slate-400">UpLine Deposit</div>
+          <div className="text-xl font-semibold text-slate-100">
+            {Number(overall.upLineDeposit || 0).toLocaleString()}
+          </div>
+        </div>
+        <div className="p-4 rounded border card-dark">
           <div className="text-xs text-slate-400">Withdrawals</div>
           <div className="text-xl font-semibold text-slate-100">
             {Number(
-              (overall.otherWithdrawal || 0) + (overall.penalWithdrawal || 0)
+              (overall.otherWithdrawal || 0) + (overall.penalWithdrawal || 0) + (overall.upLineWithdrawal || 0)
             ).toLocaleString()}
+          </div>
+        </div>
+        <div className="p-4 rounded border card-dark">
+          <div className="text-xs text-slate-400">UpLine Withdrawal</div>
+          <div className="text-xl font-semibold text-slate-100">
+            {Number(overall.upLineWithdrawal || 0).toLocaleString()}
           </div>
         </div>
         <div className="p-4 rounded border card-dark">
@@ -119,14 +124,16 @@ export default function SummaryDetail({ summary, aggregate, onBack }) {
               borderBottom: "1px solid #1f2937",
             }}
           >
-            <tr>
+              <tr>
               <th className="p-3" style={{ width: 48 }}></th>
               <th className="p-3 text-left">Account</th>
               <th className="p-3 text-right">Opening</th>
               <th className="p-3 text-right">Deposit</th>
               <th className="p-3 text-right">Other Dep</th>
+                <th className="p-3 text-right">UpLine Dep</th>
               <th className="p-3 text-right">Penal W</th>
               <th className="p-3 text-right">Other W</th>
+                <th className="p-3 text-right">UpLine W</th>
               <th className="p-3 text-right">Net</th>
               <th className="p-3 text-right">Next Opening</th>
             </tr>
@@ -161,8 +168,10 @@ export default function SummaryDetail({ summary, aggregate, onBack }) {
                 <NumberCell v={a.openingBefore} />
                 <NumberCell v={a.deposit} />
                 <NumberCell v={a.otherDeposit} />
+                <NumberCell v={a.upLineDeposit} />
                 <NumberCell v={a.penalWithdrawal} />
                 <NumberCell v={a.otherWithdrawal} />
+                <NumberCell v={a.upLineWithdrawal} />
                 <NumberCell v={a.net} />
                 <NumberCell v={a.openingAfter} />
               </tr>
@@ -194,3 +203,5 @@ export default function SummaryDetail({ summary, aggregate, onBack }) {
     </div>
   );
 }
+
+export default React.memo(SummaryDetail);

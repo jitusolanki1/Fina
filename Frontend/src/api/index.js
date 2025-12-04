@@ -1,9 +1,3 @@
-import axios from "axios";
-import BASE_URL from "./helper";
-
-const api = axios.create({
-  baseURL: BASE_URL,
-  headers: { "Content-Type": "application/json" },
-});
-
+// Redirect to central `src/api.js` compatibility wrapper (uses fetchClient internally)
+import api from "../api";
 export default api;

@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import api from '../api';
+import React, { useEffect, useRef, useState } from 'react';
 import { listAccounts } from '../services/accountsService';
 
-export default function CommandPalette({ open, onClose, onSelect, mode = 'open' }){
+function CommandPalette({ open, onClose, onSelect, mode = 'open' }){
   const [accounts, setAccounts] = useState([]);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
@@ -99,3 +98,5 @@ export default function CommandPalette({ open, onClose, onSelect, mode = 'open' 
     </div>
   );
 }
+
+export default React.memo(CommandPalette);

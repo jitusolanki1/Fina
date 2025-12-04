@@ -1,32 +1,28 @@
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 
 export async function listAccounts() {
-  const r = await api.get('/accounts');
-  const items = r.data || [];
+  const r = await fetchJson('/accounts') || [];
+  const items = r || [];
   // normalize id field for frontend convenience
   return items.map((it) => ({ ...it, id: it.id || it._id || it.uuid }));
 }
 
 export async function getAccount(id) {
-  const r = await api.get(`/accounts/${id}`);
-  const it = r.data;
+  const it = await fetchJson(`/accounts/${id}`);
   if (!it) return null;
   return { ...it, id: it.id || it._id || it.uuid };
 }
 
 export async function createAccount(payload) {
-  const r = await api.post('/accounts', payload);
-  const it = r.data;
+  const it = await fetchJson('/accounts', { method: 'POST', body: JSON.stringify(payload) });
   return it ? { ...it, id: it.id || it._id || it.uuid } : it;
 }
 
 export async function updateAccount(id, patch) {
-  const r = await api.patch(`/accounts/${id}`, patch);
-  const it = r.data;
+  const it = await fetchJson(`/accounts/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
   return it ? { ...it, id: it.id || it._id || it.uuid } : it;
 }
 
 export async function deleteAccount(id) {
-  const r = await api.delete(`/accounts/${id}`);
-  return r.data;
+  return await fetchJson(`/accounts/${id}`, { method: 'DELETE' });
 }

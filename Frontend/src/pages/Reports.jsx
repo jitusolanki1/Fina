@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 import { listAccounts } from "../services/accountsService";
 
 function fmtDate(d) {
@@ -26,7 +26,7 @@ function csvDownload(filename, rows) {
   URL.revokeObjectURL(url);
 }
 
-export default function Reports() {
+function Reports() {
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const [rangeType, setRangeType] = useState("last_week");
@@ -84,14 +84,14 @@ export default function Reports() {
       // fetch accounts and transactions (live + archived) in parallel
       const [accounts, txRes, histRes, preTxRes, preHistRes] = await Promise.all([
         listAccounts(),
-        api.get(`/transactions?date_gte=${start}&date_lte=${end}`),
-        api.get(`/transactionsHistory?date_gte=${start}&date_lte=${end}`),
-        api.get(`/transactions?date_lt=${start}`),
-        api.get(`/transactionsHistory?date_lt=${start}`),
+        fetchJson(`/transactions?date_gte=${start}&date_lte=${end}`),
+        fetchJson(`/transactionsHistory?date_gte=${start}&date_lte=${end}`),
+        fetchJson(`/transactions?date_lt=${start}`),
+        fetchJson(`/transactionsHistory?date_lt=${start}`),
       ]);
       // accounts returned by listAccounts are normalized (include id)
-      const txs = (txRes.data || []).concat(histRes.data || []);
-      const preTxs = (preTxRes.data || []).concat(preHistRes.data || []);
+      const txs = (txRes || []).concat(histRes || []);
+      const preTxs = (preTxRes || []).concat(preHistRes || []);
 
       // initialize per-account aggregates
       const byAcc = {};
@@ -467,3 +467,5 @@ export default function Reports() {
     </div>
   );
 }
+
+export default React.memo(Reports);

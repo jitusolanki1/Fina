@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import api, { setAccessToken } from "../api";
+import { fetchJson, setAccessToken } from "../fetchClient";
 
 const AuthContext = createContext(null);
 
@@ -13,8 +13,7 @@ export function AuthProvider({ children }) {
     let mounted = true;
     (async () => {
       try {
-        const resp = await api.post("/auth/refresh");
-        const data = resp?.data;
+        const data = await fetchJson('/auth/refresh', { method: 'POST' });
         if (data?.token && mounted) {
           setToken(data.token);
           setUser(data.user || null);
@@ -36,30 +35,42 @@ export function AuthProvider({ children }) {
 
   async function login(email, password) {
     try {
-      const resp = await api.post("/auth/login", { email, password });
-      const data = resp?.data;
+      const data = await fetchJson('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
       if (data?.token) {
         setToken(data.token);
         setUser(data.user || { email });
+        // store dev fallback refresh token if provided (for cross-origin dev flows)
+        try { if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken); } catch (e) {}
         return { ok: true };
       }
     } catch (e) {
-      return { ok: false, error: e?.response?.data || e.message || 'login failed' };
+      // Normalize error body to a string to avoid passing objects into UI
+      const body = e && e.body;
+      const msg =
+        (body && (typeof body === 'string' ? body : body.error || JSON.stringify(body))) ||
+        e.message ||
+        'login failed';
+      return { ok: false, error: msg };
     }
     return { ok: false, error: 'no token returned' };
   }
 
   async function register(email, password, name) {
     try {
-      const resp = await api.post("/auth/register", { email, password, name });
-      const data = resp?.data;
+      const data = await fetchJson('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, name }) });
       if (data?.token) {
         setToken(data.token);
         setUser(data.user || { email });
+        try { if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken); } catch (e) {}
         return { ok: true };
       }
     } catch (e) {
-      return { ok: false, error: e?.response?.data || e.message || 'register failed' };
+      const body = e && e.body;
+      const msg =
+        (body && (typeof body === 'string' ? body : body.error || JSON.stringify(body))) ||
+        e.message ||
+        'register failed';
+      return { ok: false, error: msg };
     }
     return { ok: false, error: 'no token returned' };
   }
@@ -69,8 +80,9 @@ export function AuthProvider({ children }) {
     setUser(null);
     try {
       // notify server to clear refresh cookie
-      api.post("/auth/logout").catch(() => {});
+      fetchJson('/auth/logout', { method: 'POST' }).catch(() => {});
     } catch (e) {}
+    try { localStorage.removeItem('refreshToken'); } catch (e) {}
   }
 
   const isAuthenticated = Boolean(token);

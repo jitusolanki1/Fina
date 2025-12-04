@@ -1,4 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from "react";
+import { useAuth } from "./auth/AuthProvider";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import CommandPalette from "./components/CommandPalette";
 import ProtectedRoute from "./auth/ProtectedRoute";
@@ -78,7 +80,6 @@ function AppRoutes({
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
-  // build routes element once so we can render it in both auth and main layouts
   const routesElement = (
     <Suspense fallback={<div>Loading...</div>}>
       <Routes>
@@ -258,23 +259,40 @@ function HeaderWrapper(props) {
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-[#0A0A0A] text-slate-200">
-        <Toaster />
-        <HeaderWrapper
-          onToggleSidebar={() => setSidebarOpen((s) => !s)}
-          onToggleCollapse={() => setSidebarCollapsed((s) => !s)}
-          sidebarOpen={sidebarOpen}
-          collapsed={sidebarCollapsed}
-        />
-        <AppRoutes
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-          sidebarCollapsed={sidebarCollapsed}
-          onToggleCollapse={() => setSidebarCollapsed((s) => !s)}
-        />
+  const { initialized } = useAuth() || {};
+
+  // Ensure hooks are called in the same order across renders by creating
+  // the QueryClient ref before any early returns that depend on auth state.
+  const queryClientRef = React.useRef();
+  if (!queryClientRef.current) queryClientRef.current = new QueryClient();
+
+  // If the auth provider hasn't finished its initial check, show a loader to avoid route flashes
+  if (initialized === false) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] text-slate-200">
+        <div className="text-sm text-slate-300">Loading…</div>
       </div>
-    </BrowserRouter>
+    );
+  }
+  return (
+    <QueryClientProvider client={queryClientRef.current}>
+      <BrowserRouter>
+        <div className="min-h-screen bg-[#0A0A0A] text-slate-200">
+          <Toaster />
+          <HeaderWrapper
+            onToggleSidebar={() => setSidebarOpen((s) => !s)}
+            onToggleCollapse={() => setSidebarCollapsed((s) => !s)}
+            sidebarOpen={sidebarOpen}
+            collapsed={sidebarCollapsed}
+          />
+          <AppRoutes
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleCollapse={() => setSidebarCollapsed((s) => !s)}
+          />
+        </div>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

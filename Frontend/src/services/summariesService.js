@@ -1,21 +1,18 @@
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 
 export async function listSummaries(query = {}) {
-  const r = await api.get('/summaries', { params: query });
-  return r.data;
+  const qs = query && Object.keys(query).length ? `?${new URLSearchParams(query).toString()}` : '';
+  return await fetchJson(`/summaries${qs}`) || [];
 }
 
 export async function getSummary(id) {
-  const r = await api.get(`/summaries/${id}`);
-  return r.data;
+  return await fetchJson(`/summaries/${id}`);
 }
 
 export async function createSummary(payload) {
-  const r = await api.post('/summaries', payload);
-  return r.data;
+  return await fetchJson('/summaries', { method: 'POST', body: JSON.stringify(payload) });
 }
 
 export async function deleteSummary(id) {
-  const r = await api.delete(`/summaries/${id}`);
-  return r.data;
+  return await fetchJson(`/summaries/${id}`, { method: 'DELETE' });
 }

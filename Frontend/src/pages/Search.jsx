@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import api from "../api";
+import { fetchJson } from "../fetchClient";
 import { listAccounts } from "../services/accountsService";
 import { Search as SearchIcon } from "lucide-react";
 
@@ -16,7 +16,7 @@ function csvDownload(filename, rows) {
   URL.revokeObjectURL(url);
 }
 
-export default function SearchPage() {
+function SearchPage() {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState("account"); // 'account' or 'description'
   const [accounts, setAccounts] = useState([]);
@@ -62,10 +62,10 @@ export default function SearchPage() {
     const fetchDesc = async () => {
       try {
         const [t1, t2] = await Promise.all([
-          api.get(`/transactions?description_like=${encodeURIComponent(q)}&_limit=6`),
-          api.get(`/transactionsHistory?description_like=${encodeURIComponent(q)}&_limit=6`),
+          fetchJson(`/transactions?description_like=${encodeURIComponent(q)}&_limit=6`),
+          fetchJson(`/transactionsHistory?description_like=${encodeURIComponent(q)}&_limit=6`),
         ]);
-        const txs = (t1.data || []).concat(t2.data || []);
+        const txs = (t1 || []).concat(t2 || []);
         const seen = new Set();
         const descs = [];
         for (const tx of txs) {
@@ -103,19 +103,19 @@ export default function SearchPage() {
       if (selectedSuggestion && selectedSuggestion.type === "account") {
         const id = selectedSuggestion.id;
         const [r1, r2] = await Promise.all([
-          api.get(`/transactions?accountId=${id}&_sort=date&_order=asc`),
-          api.get(`/transactionsHistory?accountId=${id}&_sort=date&_order=asc`),
+          fetchJson(`/transactions?accountId=${id}&_sort=date&_order=asc`),
+          fetchJson(`/transactionsHistory?accountId=${id}&_sort=date&_order=asc`),
         ]);
-        txs = (r1.data || []).concat(r2.data || []);
+        txs = (r1 || []).concat(r2 || []);
       } else if (mode === "account") {
         // attempt to find account by name
         const acc = accounts.find((a) => a.name && a.name.toLowerCase() === text.toLowerCase()) || accounts.find((a) => a.name && a.name.toLowerCase().includes(text.toLowerCase()));
         if (acc) {
           const [r1, r2] = await Promise.all([
-            api.get(`/transactions?accountId=${acc.id}&_sort=date&_order=asc`),
-            api.get(`/transactionsHistory?accountId=${acc.id}&_sort=date&_order=asc`),
+            fetchJson(`/transactions?accountId=${acc.id}&_sort=date&_order=asc`),
+            fetchJson(`/transactionsHistory?accountId=${acc.id}&_sort=date&_order=asc`),
           ]);
-          txs = (r1.data || []).concat(r2.data || []);
+          txs = (r1 || []).concat(r2 || []);
         } else {
           // no account found, return empty
           txs = [];
@@ -123,10 +123,10 @@ export default function SearchPage() {
       } else {
         // description search: fetch then strictly filter client-side to avoid unrelated results
         const [r1, r2] = await Promise.all([
-          api.get(`/transactions?description_like=${encodeURIComponent(text)}&_sort=date&_order=asc`),
-          api.get(`/transactionsHistory?description_like=${encodeURIComponent(text)}&_sort=date&_order=asc`),
+          fetchJson(`/transactions?description_like=${encodeURIComponent(text)}&_sort=date&_order=asc`),
+          fetchJson(`/transactionsHistory?description_like=${encodeURIComponent(text)}&_sort=date&_order=asc`),
         ]);
-        txs = (r1.data || []).concat(r2.data || []);
+        txs = (r1 || []).concat(r2 || []);
         const qLower = text.toLowerCase();
         txs = txs.filter((t) => (t.description || "").toLowerCase().includes(qLower));
       }
@@ -298,3 +298,5 @@ export default function SearchPage() {
     </div>
   );
 }
+
+export default React.memo(SearchPage);
