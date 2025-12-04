@@ -80,9 +80,23 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
     })();
   }, [txData, account]);
 
-  const createMutation = useMutation((payload) => createTransaction(payload), { onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }), onError: () => toast.error('Could not add transaction') });
-  const updateMutation = useMutation(({ id, patch }) => updateTransaction(id, patch), { onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }), onError: () => toast.error('Could not update transaction') });
-  const deleteMutation = useMutation((id) => deleteTransaction(id), { onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }), onError: () => toast.error('Could not delete transaction') });
+  const createMutation = useMutation({
+    mutationFn: (payload) => createTransaction(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }),
+    onError: () => toast.error('Could not add transaction'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, patch }) => updateTransaction(id, patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }),
+    onError: () => toast.error('Could not update transaction'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => deleteTransaction(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }),
+    onError: () => toast.error('Could not delete transaction'),
+  });
 
   const hasOpeningTx = (rawTxs || []).some((t) => String(t.description || '').toLowerCase().includes('opening'));
 

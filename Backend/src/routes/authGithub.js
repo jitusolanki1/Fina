@@ -31,50 +31,65 @@ router.get("/connect", (req, res) => {
 
 // 2) Callback: exchange code for access_token
 router.get("/callback", async (req, res) => {
-  const { code, state } = req.query;
-  if (!code) return res.status(400).send("Code missing");
+  try {
+    const { code, state } = req.query;
+    if (!code) return res.status(400).send("Code missing");
 
-  // Exchange code
-  const tokenRes = await axios.post("https://github.com/login/oauth/access_token", {
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    code,
-    redirect_uri: CALLBACK,
-    state
-  }, { headers: { Accept: "application/json" } });
+    // Exchange code for access token
+    const tokenRes = await axios.post(
+      "https://github.com/login/oauth/access_token",
+      {
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
+        code,
+        redirect_uri: CALLBACK,
+        state,
+      },
+      { headers: { Accept: "application/json" } }
+    );
 
-  const accessToken = tokenRes.data.access_token;
-  if (!accessToken) return res.status(400).send("No access token returned");
+    const accessToken = tokenRes?.data?.access_token;
+    if (!accessToken) {
+      console.error('GitHub token exchange failed', tokenRes?.data);
+      return res.status(500).send("No access token returned");
+    }
 
-  // Get user info
-  const octokit = octokitForToken(accessToken);
-  const { data: ghUser } = await octokit.users.getAuthenticated();
+    // Get user info
+    const octokit = octokitForToken(accessToken);
+    const { data: ghUser } = await octokit.users.getAuthenticated();
 
-  // Persistence: find or create our user by email or github id
-  // (Assuming you have currently logged-in session or create a new user)
-  // For demo, create/find by ghUser.login
-  let user = await User.findOne({ "github.username": ghUser.login });
-  if (!user) {
-    user = new User({
-      name: ghUser.name || ghUser.login,
-      email: ghUser.email || null,
-      github: { username: ghUser.login, accessToken, connectedAt: new Date() }
-    });
-  } else {
-    user.github.accessToken = accessToken;
-    user.github.connectedAt = new Date();
+    // Persist GitHub info without triggering required-field validation on User schema.
+    // Use findOneAndUpdate with upsert and skip validators so we don't need password/email for OAuth-only accounts.
+    const filter = { "github.username": ghUser.login };
+    const update = {
+      $set: {
+        "github.username": ghUser.login,
+        "github.accessToken": accessToken,
+        "github.connectedAt": new Date(),
+        "github.repo": "Fina",
+        name: ghUser.name || ghUser.login,
+      },
+    };
+    if (ghUser.email) update.$set.email = ghUser.email;
+
+    const opts = { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: false };
+    const user = await User.findOneAndUpdate(filter, update, opts);
+
+    // Ensure repo exists (best-effort)
+    try {
+      await ensureRepoExists(octokit, user.github.repo);
+    } catch (e) {
+      console.error('ensureRepoExists failed', e);
+    }
+
+    // Redirect back to frontend (if configured) or send a success page
+    const frontendRoot = (process.env.FRONTEND_URL || "").replace(/\/$/, "");
+    if (frontendRoot) return res.redirect(`${frontendRoot}/?github_connected=1`);
+    return res.send('GitHub connected successfully');
+  } catch (err) {
+    console.error('GitHub callback error', err);
+    return res.status(500).send('GitHub callback failed: ' + (err.message || 'unknown error'));
   }
-
-  // Save repo name preference
-  user.github.repo = "Fina";
-
-  await user.save();
-
-  // Ensure repo exists
-  await ensureRepoExists(octokit, user.github.repo);
-
-  // Redirect to app (show success)
-  res.redirect("/app?github_connected=1");
 });
 
 function generateStateForUser(req) {
