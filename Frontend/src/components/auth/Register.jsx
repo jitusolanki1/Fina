@@ -25,7 +25,7 @@ export default function Register(){
       const res = await register(email, password, name);
       if(res?.ok){
         toast.success('Registered successfully');
-        navigate('/');
+        navigate('/dashboard');
       } else {
         toast.error(res?.error || 'Registration failed');
       }

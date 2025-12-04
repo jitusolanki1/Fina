@@ -1,9 +1,30 @@
 import api from "../api";
-import { encryptString } from "./crypto";
+import { encryptString, decryptString } from "./crypto";
 
 export async function listTransactions(query = {}) {
   const resp = await api.get('/transactions', { params: query });
-  return resp.data;
+  const data = resp.data || [];
+  const key = import.meta.env.VITE_ENCRYPTION_KEY || "";
+  if (!key) return data;
+  try {
+    // decrypt dateEncrypted into date when present
+    const out = await Promise.all(
+      data.map(async (tx) => {
+        if (tx.dateEncrypted) {
+          try {
+            const d = await decryptString(tx.dateEncrypted, key);
+            return { ...tx, date: d };
+          } catch (e) {
+            return tx;
+          }
+        }
+        return tx;
+      })
+    );
+    return out;
+  } catch (e) {
+    return data;
+  }
 }
 
 export async function createTransaction(tx) {

@@ -9,6 +9,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const { login } = useAuth();
+  const { isAuthenticated, initialized } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
@@ -22,7 +23,7 @@ export default function Login() {
       const res = await login(email, password);
       if (res?.ok) {
         toast.success("Logged in");
-        const dest = location.state?.from?.pathname || "/";
+        const dest = location.state?.from?.pathname || "/dashboard";
         navigate(dest, { replace: true });
       } else {
         toast.error(res?.error || "Login failed");
@@ -33,6 +34,13 @@ export default function Login() {
       setLoading(false);
     }
   }
+
+  // if already authenticated, redirect to dashboard
+  React.useEffect(() => {
+    if (initialized && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [initialized, isAuthenticated, navigate]);
 
   return (
     <div className="min-h-screen w-full bg-black text-white relative overflow-hidden">

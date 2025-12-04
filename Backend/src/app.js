@@ -20,6 +20,17 @@ dotenv.config();
 
 const app = express();
 
+// Disable ETag generation for API responses to avoid automatic 304 Not Modified
+app.set('etag', false);
+
+// For all API routes, send no-cache headers so clients receive fresh content
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Configure CORS to allow requests (with credentials) from the frontend origins.
 // Provide a comma-separated list in env var FRONTEND_ORIGINS, or default to localhost and Netlify preview.
 const defaultOrigins = "http://localhost:5173,https://finaa-app.netlify.app";

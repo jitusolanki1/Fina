@@ -37,7 +37,7 @@ export async function previewSummaryRange(start, end) {
   // fetch accounts and all transactions in range in parallel (fewer requests)
   const [accounts, txs] = await Promise.all([
     listAccounts(),
-    listTransactions({ date: `${start}`, date: `${end}` }),
+    listTransactions({ date_gte: start, date_lte: end }),
   ]);
 
   // group transactions by accountId
@@ -103,6 +103,9 @@ export async function previewSummaryRange(start, end) {
   const txSample = txs
     .slice(0, 10)
     .map((t) => ({ id: t.id, accountId: t.accountId }));
+  const txQuery = `/transactions?date_gte=${encodeURIComponent(
+    start
+  )}&date_lte=${encodeURIComponent(end)}`;
   return { perAccount, overall, txCount: txs.length, txQuery, txSample };
 }
 
@@ -136,7 +139,7 @@ export async function createSummaryRange(start, end) {
 
   const [accounts, txs] = await Promise.all([
     listAccounts(),
-    listTransactions({ date: `${start}`, date: `${end}` }),
+    listTransactions({ date_gte: start, date_lte: end }),
   ]);
 
   const txByAccount = txs.reduce((acc, t) => {

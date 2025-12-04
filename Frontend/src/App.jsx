@@ -64,7 +64,7 @@ function AppRoutes({
         const now = Date.now();
         const last = lastCtrlITimeRef.current;
         if (now - last < 400) {
-          navigate("/");
+          navigate("/dashboard");
           lastCtrlITimeRef.current = 0;
           return;
         }
@@ -84,8 +84,9 @@ function AppRoutes({
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/" element={<LoginPage />} />
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
