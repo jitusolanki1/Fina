@@ -101,4 +101,35 @@ router.delete("/:id", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 
+// PATCH /api/transactions/:id -> update a transaction (partial)
+router.patch('/:id', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const patch = Object.assign({}, req.body || {});
+    const tx = await Transaction.findById(id);
+    if (!tx) return res.status(404).json({ error: 'transaction not found' });
+    // ensure the authenticated user owns this transaction
+    const userId = req.user && req.user.sub;
+    if (String(tx.createdBy) !== String(userId)) return res.status(403).json({ error: 'forbidden' });
+
+    // Only allow updating a limited set of fields
+    const allowed = ['description','date','deposit','otherDeposit','upLineDeposit','penalWithdrawal','otherWithdrawal','upLineWithdrawal','rolled','accountId'];
+    let changed = false;
+    for (const k of allowed) {
+      if (Object.prototype.hasOwnProperty.call(patch, k)) {
+        tx[k] = patch[k];
+        changed = true;
+      }
+    }
+
+    if (!changed) return res.status(400).json({ error: 'no updatable fields provided' });
+
+    await tx.save();
+    res.json(tx);
+  } catch (err) {
+    console.error('transactions.patch error', err && err.message);
+    res.status(500).json({ error: err.message || String(err) });
+  }
+});
+
 export default router;
