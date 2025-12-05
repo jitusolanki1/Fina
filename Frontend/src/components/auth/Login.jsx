@@ -35,10 +35,9 @@ export default function Login() {
     }
   }
 
-  // if already authenticated, redirect to dashboard
   React.useEffect(() => {
     if (initialized && isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   }, [initialized, isAuthenticated, navigate]);
 
@@ -103,7 +102,7 @@ export default function Login() {
                 loading={loading}
                 className="w-full py-3 rounded-md bg-purple-600 hover:bg-purple-700 transition shadow-lg hover:shadow-purple-700/40 font-medium text-white"
               >
-                {loading ? 'Signing in...' : 'Login'}
+                {loading ? "Signing in..." : "Login"}
               </LoadingButton>
 
               {/* Divider */}

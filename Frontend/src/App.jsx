@@ -38,7 +38,7 @@ function AppRoutes({
   onToggleCollapse,
 }) {
   const location = useLocation();
-  const authPaths = ["/", "/login", "/register"];
+  const authPaths = ["/login", "/register"];
   const isAuthRoute = authPaths.includes(location.pathname);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState("open");
@@ -85,9 +85,8 @@ function AppRoutes({
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/" element={<LoginPage />} />
         <Route
-          path="/dashboard"
+          path="/"
           element={
             <ProtectedRoute>
               <Dashboard />
@@ -209,6 +208,15 @@ function AppRoutes({
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="*"
+          element={
+            <div className="text-center text-slate-400">
+              404 - Page Not Found
+            </div>
+          }
+        />
       </Routes>
     </Suspense>
   );
@@ -251,7 +259,7 @@ function AppRoutes({
 
 function HeaderWrapper(props) {
   const location = useLocation();
-  const authPaths = ["/", "/login", "/register"];
+  const authPaths = [ "/login", "/register"];
   if (authPaths.includes(location.pathname)) return null;
   return <Header {...props} />;
 }
@@ -260,7 +268,7 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
-      return localStorage.getItem('sidebarCollapsed') === '1';
+      return localStorage.getItem("sidebarCollapsed") === "1";
     } catch (e) {
       return false;
     }
@@ -290,7 +298,9 @@ export default function App() {
             onToggleCollapse={() => {
               setSidebarCollapsed((s) => {
                 const next = !s;
-                try { localStorage.setItem('sidebarCollapsed', next ? '1' : '0'); } catch (e) {}
+                try {
+                  localStorage.setItem("sidebarCollapsed", next ? "1" : "0");
+                } catch (e) {}
                 return next;
               });
             }}
@@ -304,7 +314,9 @@ export default function App() {
             onToggleCollapse={() => {
               setSidebarCollapsed((s) => {
                 const next = !s;
-                try { localStorage.setItem('sidebarCollapsed', next ? '1' : '0'); } catch (e) {}
+                try {
+                  localStorage.setItem("sidebarCollapsed", next ? "1" : "0");
+                } catch (e) {}
                 return next;
               });
             }}

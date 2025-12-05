@@ -12,22 +12,17 @@ const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
 const CALLBACK = process.env.GITHUB_OAUTH_CALLBACK;
 
-// 1) Redirect user to GitHub to authorize
 router.get("/connect", (req, res) => {
-  // Allow frontend to pass a linkState (e.g. containing the user's auth token)
-  // so the callback can link the GitHub account to the currently logged-in user.
   const state =
     req.query && req.query.linkState
       ? req.query.linkState
-      : generateStateForUser(req); // optional CSRF state
+      : generateStateForUser(req);
   const scopes = ["repo", "read:user", "user:email"];
 
-  // Guard against misconfiguration: don't redirect to GitHub with undefined params
   if (!CLIENT_ID || !CALLBACK) {
     console.error(
       "GitHub OAuth connect attempted but GITHUB_CLIENT_ID or GITHUB_OAUTH_CALLBACK is not set."
     );
-    // Prefer redirecting back to frontend settings with an error flag if FRONTEND_URL is configured
     const frontendUrl = process.env.FRONTEND_URL || null;
     if (frontendUrl) {
       return res.redirect(
@@ -47,13 +42,11 @@ router.get("/connect", (req, res) => {
   res.redirect(url);
 });
 
-// 2) Callback: exchange code for access_token
 router.get("/callback", async (req, res) => {
   try {
     const { code, state } = req.query;
     if (!code) return res.status(400).send("Code missing");
 
-    // Exchange code for access token
     const tokenRes = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
@@ -72,31 +65,25 @@ router.get("/callback", async (req, res) => {
       return res.status(500).send("No access token returned");
     }
 
-    // Get user info
     const octokit = octokitForToken(accessToken);
     const { data: ghUser } = await octokit.users.getAuthenticated();
 
-    // If the GitHub redirect state contained a `userToken`, we will try to verify
-    // that token and attach this GitHub account to the logged-in user. This ensures
-    // manual commit actions will run under the correct user.
     let user = null;
     try {
       if (state && String(state).startsWith("userToken:")) {
-        // state was encoded by the frontend as `userToken:<encoded-jwt>`
         const raw = String(state).slice("userToken:".length);
         const jwtToken = decodeURIComponent(raw);
-        // verify token to extract user id
         const jwt = await import("jsonwebtoken");
         const JWT_SECRET = process.env.JWT_SECRET;
         try {
           const payload = jwt.verify(jwtToken, JWT_SECRET);
           if (payload && payload.sub) {
-            // Attach github info to this existing user id
             const filter = { _id: payload.sub };
             const update = {
               $set: {
                 "github.username": ghUser.login,
                 "github.accessToken": accessToken,
+                "github.avatarUrl": ghUser.avatar_url,
                 "github.connectedAt": new Date(),
                 "github.repo": "Fina",
                 name: ghUser.name || ghUser.login,
@@ -147,13 +134,13 @@ router.get("/callback", async (req, res) => {
         }
       }
 
-      // If we didn't find a user via the state token above, fallback to upsert by github username
       if (!user) {
         const filter = { "github.username": ghUser.login };
         const update = {
           $set: {
             "github.username": ghUser.login,
             "github.accessToken": accessToken,
+            "github.avatarUrl": ghUser.avatar_url,
             "github.connectedAt": new Date(),
             "github.repo": "Fina",
             name: ghUser.name || ghUser.login,
@@ -195,7 +182,6 @@ router.get("/callback", async (req, res) => {
 });
 
 function generateStateForUser(req) {
-  // Implement CSRF state generation and storage (session / db)
   return "random-state-123";
 }
 
