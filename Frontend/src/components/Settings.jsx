@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import fetchClient from '../fetchClient';
 
@@ -13,6 +13,7 @@ const Settings = () => {
   const { user, token } = useAuth();
   const [githubToken, setGithubToken] = useState('');
   const [githubStatus, setGithubStatus] = useState(null);
+  const [currentUser, setCurrentUser] = useState(user || null);
   const [committing, setCommitting] = useState(false);
   const [timezone, setTimezone] = useState(user?.timezone || 'Asia/Kolkata');
   const [autoCommit, setAutoCommit] = useState(user?.autoCommit ?? true);
@@ -225,9 +226,28 @@ const Settings = () => {
                 </div>
               )}
 
+              {/* Show current linked status for the authenticated user (fresh from server) */}
+              {currentUser && currentUser.github && currentUser.github.accessToken && (
+                <div className="p-3 rounded bg-green-50 text-green-800">Connected (saved on your account): {currentUser.github.username || currentUser.github.repo}</div>
+              )}
+
               <div className="pt-4">
                 <button onClick={async () => {
                   if (!user) return alert('login required');
+                  // Prefer the freshest server-side user info (may have been updated by OAuth callback)
+                  let serverUser = currentUser;
+                  try {
+                    const me = await fetchClient.fetchJson('/auth/me', { method: 'GET' });
+                    serverUser = me.user || serverUser;
+                    setCurrentUser(serverUser);
+                  } catch (e) {
+                    // ignore — we'll proceed with whatever we have locally
+                  }
+
+                  if (!serverUser || !serverUser.github || !serverUser.github.accessToken) {
+                    return alert('Manual commit failed: GitHub not connected. Please connect your GitHub account or save a PAT in Settings.');
+                  }
+
                   setCommitting(true);
                   try {
                     const r = await fetchClient.fetchJson('/commit/manual', { method: 'POST' });

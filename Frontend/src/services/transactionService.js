@@ -29,11 +29,21 @@ export async function listTransactions(query = {}) {
       const id = t.id || t._id || t.uuid || null;
       const accountId = t.accountId || (t.account && (t.account.id || t.account._id || t.account.uuid)) || null;
       const accountName = (t.account && (t.account.name || t.account.accountName)) || null;
+      // ensure there's a usable `date` for UI rendering: prefer decrypted `date`, then `date` property, then `createdAt` timestamp
+      let dateVal = t.date || null;
+      if (!dateVal && t.createdAt) {
+        try {
+          dateVal = new Date(t.createdAt).toISOString().slice(0, 10);
+        } catch (e) {
+          dateVal = null;
+        }
+      }
       return {
         ...t,
         id,
         accountId,
         accountName: t.accountName || accountName || undefined,
+        date: dateVal || undefined,
       };
     });
     return norm;
@@ -44,6 +54,12 @@ export async function listTransactions(query = {}) {
 
 export async function createTransaction(tx) {
   const payload = Object.assign({}, tx);
+  // Defensive: if caller passed an `account` object, extract its id into `accountId`
+  try {
+    if (!payload.accountId && payload.account && typeof payload.account === 'object') {
+      payload.accountId = payload.account.id || payload.account._id || payload.account.uuid || payload.account;
+    }
+  } catch (e) {}
   try {
     const key = import.meta.env.VITE_ENCRYPTION_KEY || "36edf64284417658f03d83fa56b5fec9";
     if (payload.date && key) {

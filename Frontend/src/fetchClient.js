@@ -77,9 +77,17 @@ export async function fetchJson(path, opts = {}) {
 
   const ct = res.headers.get("content-type") || "";
   const text = await res.text();
-
   if (!res.ok) {
     const body = ct.includes("application/json") ? JSON.parse(text) : text;
+    // If we unexpectedly received HTML (e.g. index.html) for an API route, provide clearer diagnostics
+    if ((ct.includes("text/html") || (typeof body === 'string' && body.trim().startsWith('<')))) {
+      const snippet = (typeof body === 'string' ? body : JSON.stringify(body)).slice(0, 300).replace(/\n/g, ' ');
+      const err = new Error(`API returned HTML for ${API_BASE + path}: ${snippet}`);
+      err.status = res.status;
+      err.body = body;
+      throw err;
+    }
+
     // Normalize error message so UI never receives raw objects
     const errMsg =
       (body && (typeof body === "string" ? body : body.error || JSON.stringify(body))) ||
@@ -88,6 +96,15 @@ export async function fetchJson(path, opts = {}) {
     const err = new Error(errMsg);
     err.status = res.status;
     err.body = body;
+    throw err;
+  }
+
+  // If a successful response contains HTML, that's likely a misconfigured host (serving index.html).
+  if ((ct.includes("text/html") || (typeof text === 'string' && text.trim().startsWith('<')))) {
+    const snippet = text.slice(0, 300).replace(/\n/g, ' ');
+    const err = new Error(`Expected JSON but received HTML from ${API_BASE + path}: ${snippet}`);
+    err.status = res.status;
+    err.body = text;
     throw err;
   }
 

@@ -370,6 +370,7 @@ body {
     border-right: 1px solid var(--border);
     border-top-right-radius: 12px;
     border-bottom-right-radius: 12px;
+    pointer-events: auto;
 }
 
 .sidebar .brand {

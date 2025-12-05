@@ -38,7 +38,7 @@ function AppRoutes({
   onToggleCollapse,
 }) {
   const location = useLocation();
-  const authPaths = ["/login", "/register"];
+  const authPaths = ["/", "/login", "/register"];
   const isAuthRoute = authPaths.includes(location.pathname);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteMode, setPaletteMode] = useState("open");
@@ -251,14 +251,20 @@ function AppRoutes({
 
 function HeaderWrapper(props) {
   const location = useLocation();
-  const authPaths = ["/login", "/register"];
+  const authPaths = ["/", "/login", "/register"];
   if (authPaths.includes(location.pathname)) return null;
   return <Header {...props} />;
 }
 
 export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sidebarCollapsed') === '1';
+    } catch (e) {
+      return false;
+    }
+  });
   const { initialized } = useAuth() || {};
 
   // Ensure hooks are called in the same order across renders by creating
@@ -281,7 +287,13 @@ export default function App() {
           <Toaster />
           <HeaderWrapper
             onToggleSidebar={() => setSidebarOpen((s) => !s)}
-            onToggleCollapse={() => setSidebarCollapsed((s) => !s)}
+            onToggleCollapse={() => {
+              setSidebarCollapsed((s) => {
+                const next = !s;
+                try { localStorage.setItem('sidebarCollapsed', next ? '1' : '0'); } catch (e) {}
+                return next;
+              });
+            }}
             sidebarOpen={sidebarOpen}
             collapsed={sidebarCollapsed}
           />
@@ -289,7 +301,13 @@ export default function App() {
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
             sidebarCollapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed((s) => !s)}
+            onToggleCollapse={() => {
+              setSidebarCollapsed((s) => {
+                const next = !s;
+                try { localStorage.setItem('sidebarCollapsed', next ? '1' : '0'); } catch (e) {}
+                return next;
+              });
+            }}
           />
         </div>
       </BrowserRouter>

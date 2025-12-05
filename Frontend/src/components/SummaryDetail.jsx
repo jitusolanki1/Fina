@@ -25,11 +25,10 @@ function SummaryDetail({ summary, aggregate, onBack }) {
     const range = summary?.date || null;
     try {
       if (accountId) {
-        const acct = (await fetchJson(`/accounts/${accountId}`)) || {
-          id: accountId,
-          name: accountName,
-          openingBalance: openingBefore,
-        };
+        const fetched = (await fetchJson(`/accounts/${accountId}`)) || null;
+        const acct = fetched
+          ? { ...fetched, id: fetched.id || fetched._id || fetched.uuid || accountId }
+          : { id: accountId, name: accountName, openingBalance: openingBefore };
         setSelectedAccount(acct);
         setSelectedRange(range);
       } else {

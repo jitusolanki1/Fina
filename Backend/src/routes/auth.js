@@ -1,5 +1,6 @@
 import express from "express";
 import jwt from "jsonwebtoken";
+import { requireAuth } from "../middleware/auth.js";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
 import { validateBody, schemas } from "../middleware/validate.js";
@@ -118,6 +119,21 @@ router.post("/logout", (req, res) => {
   const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', path: '/' };
   res.clearCookie("refreshToken", cookieOptions);
   res.json({ ok: true });
+});
+
+// GET /api/auth/me -> return current authenticated user's details (including github info)
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user && req.user.sub;
+    if (!userId) return res.status(401).json({ error: 'unauthorized' });
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'user not found' });
+    // return a safe subset
+    return res.json({ user: { id: user._id, email: user.email, name: user.name, github: user.github || null, timezone: user.timezone, autoCommit: user.autoCommit, commitTime: user.commitTime } });
+  } catch (e) {
+    console.error('auth.me error', e && e.message);
+    return res.status(500).json({ error: e.message || 'failed' });
+  }
 });
 
 export default router;
