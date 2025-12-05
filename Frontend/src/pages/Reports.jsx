@@ -121,8 +121,8 @@ function Reports() {
       for (const t of txs) {
         const id = t.accountId;
         if (!byAcc[id]) continue;
-        const deposits = Number(t.deposit || 0) + Number(t.otherDeposit || 0);
-        const withdrawals = Number(t.penalWithdrawal || 0) + Number(t.otherWithdrawal || 0);
+        const deposits = Number(t.deposit || 0) + Number(t.otherDeposit || 0) + Number(t.penalDeposit || 0) + Number(t.upLineDeposit || 0);
+        const withdrawals = Number(t.penalWithdrawal || 0) + Number(t.otherWithdrawal || 0) + Number(t.upLineWithdrawal || 0);
         byAcc[id].deposits += deposits;
         byAcc[id].withdrawals += withdrawals;
         byAcc[id].txCount += 1;
@@ -142,10 +142,28 @@ function Reports() {
         };
       });
 
+      // enrich transactions with account name for transaction-level exports
+      const accMap = Object.fromEntries((accounts || []).map((a) => [a.id, a.name]));
+      const txRows = (txs || []).map((t) => ({
+        date: t.date,
+        accountId: t.accountId,
+        accountName: accMap[t.accountId] || "-",
+        description: t.description || "",
+        deposit: Number(t.deposit || 0),
+        penalDeposit: Number(t.penalDeposit || 0),
+        otherDeposit: Number(t.otherDeposit || 0),
+        upLineDeposit: Number(t.upLineDeposit || 0),
+        penalWithdrawal: Number(t.penalWithdrawal || 0),
+        otherWithdrawal: Number(t.otherWithdrawal || 0),
+        upLineWithdrawal: Number(t.upLineWithdrawal || 0),
+        createdBy: t.createdBy || "",
+      }));
+
       setReportData({
         start: computeRange(rangeType).start,
         end: computeRange(rangeType).end,
         rows,
+        txs: txRows,
       });
     } catch (err) {
       console.error(err);
@@ -371,9 +389,56 @@ function Reports() {
                   Preview: {reportData.start} → {reportData.end}
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="control-btn" onClick={downloadCSV}>
-                    Download CSV
-                  </button>
+                    <button className="control-btn" onClick={downloadCSV}>
+                      Download Summary CSV
+                    </button>
+                    <button className="control-btn" onClick={() => {
+                      // download transaction-level CSV with descriptions, totals and per-user breakdown
+                      if (!reportData || !reportData.txs) return;
+                      const header = ["Date", "Account", "Description", "Deposit", "PenalDeposit", "OtherDeposit", "UpLineDeposit", "PenalWithdrawal", "OtherWithdrawal", "UpLineWithdrawal", "CreatedBy"];
+                      const rows = [header].concat(reportData.txs.map((r) => [r.date || "", r.accountName || "", r.description || "", r.deposit || 0, r.penalDeposit || 0, r.otherDeposit || 0, r.upLineDeposit || 0, r.penalWithdrawal || 0, r.otherWithdrawal || 0, r.upLineWithdrawal || 0, r.createdBy || ""]));
+
+                      // compute totals
+                      const totals = reportData.txs.reduce((acc, x) => {
+                        acc.deposit += Number(x.deposit || 0);
+                        acc.penalDeposit += Number(x.penalDeposit || 0);
+                        acc.otherDeposit += Number(x.otherDeposit || 0);
+                        acc.upLineDeposit += Number(x.upLineDeposit || 0);
+                        acc.penalWithdrawal += Number(x.penalWithdrawal || 0);
+                        acc.otherWithdrawal += Number(x.otherWithdrawal || 0);
+                        acc.upLineWithdrawal += Number(x.upLineWithdrawal || 0);
+                        return acc;
+                      }, { deposit: 0, penalDeposit: 0, otherDeposit: 0, upLineDeposit: 0, penalWithdrawal: 0, otherWithdrawal: 0, upLineWithdrawal: 0 });
+
+                      rows.push(["", "TOTALS", "", totals.deposit, totals.penalDeposit, totals.otherDeposit, totals.upLineDeposit, totals.penalWithdrawal, totals.otherWithdrawal, totals.upLineWithdrawal, ""]);
+
+                      // per-user breakdown
+                      const perUser = {};
+                      for (const x of reportData.txs) {
+                        const u = x.createdBy || 'Unknown';
+                        if (!perUser[u]) perUser[u] = { count: 0, deposit: 0, penalDeposit: 0, otherDeposit: 0, upLineDeposit: 0, penalWithdrawal: 0, otherWithdrawal: 0, upLineWithdrawal: 0 };
+                        perUser[u].count += 1;
+                        perUser[u].deposit += Number(x.deposit || 0);
+                        perUser[u].penalDeposit += Number(x.penalDeposit || 0);
+                        perUser[u].otherDeposit += Number(x.otherDeposit || 0);
+                        perUser[u].upLineDeposit += Number(x.upLineDeposit || 0);
+                        perUser[u].penalWithdrawal += Number(x.penalWithdrawal || 0);
+                        perUser[u].otherWithdrawal += Number(x.otherWithdrawal || 0);
+                        perUser[u].upLineWithdrawal += Number(x.upLineWithdrawal || 0);
+                      }
+
+                      rows.push([]);
+                      rows.push(["User","Count","Deposit","PenalDeposit","OtherDeposit","UpLineDeposit","PenalWithdrawal","OtherWithdrawal","UpLineWithdrawal","Net"]);
+                      for (const [u, d] of Object.entries(perUser)) {
+                        const net = d.deposit + d.penalDeposit + d.otherDeposit + d.upLineDeposit - d.penalWithdrawal - d.otherWithdrawal - d.upLineWithdrawal;
+                        rows.push([u, d.count, d.deposit, d.penalDeposit, d.otherDeposit, d.upLineDeposit, d.penalWithdrawal, d.otherWithdrawal, d.upLineWithdrawal, net]);
+                      }
+
+                      const filename = `transactions-${reportData.start}_to_${reportData.end}.csv`;
+                      csvDownload(filename, rows);
+                    }}>
+                      Download Transactions CSV
+                    </button>
                 </div>
               </div>
 

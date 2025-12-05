@@ -12,7 +12,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
   const [rawTxs, setRawTxs] = useState([]);
 
   const fmt = (v) => Number(v || 0).toLocaleString();
-  const [form, setForm] = useState({ description: '', deposit: '', otherDeposit: '', upLineDeposit: '', penalWithdrawal: '', otherWithdrawal: '', upLineWithdrawal: '' });
+  const [form, setForm] = useState({ description: '', deposit: '', penalDeposit: '', otherDeposit: '', upLineDeposit: '', penalWithdrawal: '', otherWithdrawal: '', upLineWithdrawal: '' });
   const [editingCell, setEditingCell] = useState(null);
   const [latest, setLatest] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
@@ -135,6 +135,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
       accountId: account.id,
       description: form.description,
       deposit: Number(form.deposit) || 0,
+      penalDeposit: Number(form.penalDeposit) || 0,
       otherDeposit: Number(form.otherDeposit) || 0,
       upLineDeposit: Number(form.upLineDeposit) || 0,
       penalWithdrawal: Number(form.penalWithdrawal) || 0,
@@ -142,7 +143,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
       upLineWithdrawal: Number(form.upLineWithdrawal) || 0,
       date: new Date().toISOString().slice(0, 10),
     });
-    setForm({ description: '', deposit: '', otherDeposit: '', upLineDeposit: '', penalWithdrawal: '', otherWithdrawal: '', upLineWithdrawal: '' });
+    setForm({ description: '', deposit: '', penalDeposit: '', otherDeposit: '', upLineDeposit: '', penalWithdrawal: '', otherWithdrawal: '', upLineWithdrawal: '' });
     toast.success('Transaction added');
   }
 
@@ -266,6 +267,15 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
             <div className="md:col-span-1">
               <input
                 type="number"
+                placeholder="Penal Deposit"
+                value={form.penalDeposit}
+                onChange={(e) => setForm({ ...form, penalDeposit: e.target.value })}
+                className="bg-[#0A0A0A] border border-[#1f2937] p-2 w-full text-slate-200 rounded"
+              />
+            </div>
+            <div className="md:col-span-1">
+              <input
+                type="number"
                 placeholder="Other Deposit"
                 value={form.otherDeposit}
                 onChange={(e) =>
@@ -347,6 +357,9 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                 </th>
                 <th className="p-2" style={{ width: "9%" }}>
                   Deposit
+                </th>
+                <th className="p-2 hidden md:table-cell" style={{ width: "9%" }}>
+                  Penal Dep
                 </th>
                 <th className="p-2 hidden md:table-cell" style={{ width: "9%" }}>
                   Other Dep
@@ -507,6 +520,46 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                       />
                     ) : (
                       fmt(r.otherDeposit)
+                    )}
+                  </td>
+                  <td
+                    className="p-2 hidden md:table-cell num-col"
+                    onDoubleClick={() =>
+                      setEditingCell({
+                        id: r.id,
+                        field: "penalDeposit",
+                        value: r.penalDeposit,
+                      })
+                    }
+                  >
+                    {editingCell &&
+                    editingCell.id === r.id &&
+                    editingCell.field === "penalDeposit" ? (
+                      <input
+                        type="number"
+                        value={editingCell.value}
+                        onChange={(e) =>
+                          setEditingCell((s) => ({
+                            ...s,
+                            value: e.target.value,
+                          }))
+                        }
+                        onBlur={async (e) => {
+                          try {
+                            await updateMutation.mutateAsync({ id: r.id, patch: { penalDeposit: Number(editingCell.value) } });
+                            setEditingCell(null);
+                          } catch (err) {
+                            console.error(err);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.target.blur();
+                        }}
+                        autoFocus
+                        className="bg-[#0A0A0A] border border-[#1f2937] p-1 w-24 text-slate-200 rounded text-center"
+                      />
+                    ) : (
+                      fmt(r.penalDeposit)
                     )}
                   </td>
                   <td
@@ -716,6 +769,8 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="text-neutral-400 text-xs">Other Deposit</div>
                         <div className="text-right">{Number(r.otherDeposit || 0).toLocaleString()}</div>
+                        <div className="text-neutral-400 text-xs">Penal Deposit</div>
+                        <div className="text-right">{Number(r.penalDeposit || 0).toLocaleString()}</div>
                         <div className="text-neutral-400 text-xs">UpLine Deposit</div>
                         <div className="text-right">{Number(r.upLineDeposit || 0).toLocaleString()}</div>
                         <div className="text-neutral-400 text-xs">Penalty</div>

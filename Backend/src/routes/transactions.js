@@ -119,6 +119,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
       "date",
       "deposit",
       "otherDeposit",
+      "penalDeposit",
       "upLineDeposit",
       "penalWithdrawal",
       "otherWithdrawal",

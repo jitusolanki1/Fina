@@ -52,6 +52,7 @@ export async function previewSummaryRange(start, end) {
   let overall = {
     openingTotal: 0,
     deposit: 0,
+    penalDeposit: 0,
     otherDeposit: 0,
     upLineDeposit: 0,
     penalWithdrawal: 0,
@@ -76,6 +77,10 @@ export async function previewSummaryRange(start, end) {
       (s, t) => s + Number(t.penalWithdrawal || 0),
       0
     );
+    const penalDeposit = list.reduce(
+      (s, t) => s + Number(t.penalDeposit || 0),
+      0
+    );
     const otherWithdrawal = list.reduce(
       (s, t) => s + Number(t.otherWithdrawal || 0),
       0
@@ -95,6 +100,7 @@ export async function previewSummaryRange(start, end) {
       openingBefore,
       txCount: list.length,
       deposit,
+      penalDeposit,
       otherDeposit,
       upLineDeposit,
       penalWithdrawal,
@@ -106,6 +112,7 @@ export async function previewSummaryRange(start, end) {
 
     overall.openingTotal += openingBefore;
     overall.deposit += deposit;
+    overall.penalDeposit += penalDeposit;
     overall.otherDeposit += otherDeposit;
     overall.upLineDeposit += upLineDeposit;
     overall.penalWithdrawal += penalWithdrawal;
@@ -167,6 +174,7 @@ export async function createSummaryRange(start, end) {
   let overall = {
     openingTotal: 0,
     deposit: 0,
+    penalDeposit: 0,
     otherDeposit: 0,
     penalWithdrawal: 0,
     otherWithdrawal: 0,
@@ -186,6 +194,10 @@ export async function createSummaryRange(start, end) {
       (s, t) => s + Number(t.penalWithdrawal || 0),
       0
     );
+    const penalDeposit = list.reduce(
+      (s, t) => s + Number(t.penalDeposit || 0),
+      0
+    );
     const otherWithdrawal = list.reduce(
       (s, t) => s + Number(t.otherWithdrawal || 0),
       0
@@ -200,6 +212,7 @@ export async function createSummaryRange(start, end) {
       accountName: acc.name,
       openingBefore,
       deposit,
+      penalDeposit,
       otherDeposit,
       penalWithdrawal,
       otherWithdrawal,
@@ -209,6 +222,7 @@ export async function createSummaryRange(start, end) {
 
     overall.openingTotal += openingBefore;
     overall.deposit += deposit;
+    overall.penalDeposit += penalDeposit;
     overall.otherDeposit += otherDeposit;
     overall.penalWithdrawal += penalWithdrawal;
     overall.otherWithdrawal += otherWithdrawal;

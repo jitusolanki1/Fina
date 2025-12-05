@@ -367,7 +367,7 @@ function Dashboard({ focusedAccount = null }) {
       <div>
         {RC ? (
           <div className="card-dark p-4 rounded-lg">
-            <h4 className="font-medium mb-2 text-slate-200">Balance</h4>
+            <h4 className="font-medium mb-2 text-slate-800">Balance</h4>
             <div className="w-full h-56 md:h-72">
               <RC.ResponsiveContainer width="100%" height="100%">
               <RC.AreaChart data={globalChartSeries}>
@@ -375,7 +375,7 @@ function Dashboard({ focusedAccount = null }) {
                 <RC.XAxis dataKey="date" />
                 <RC.YAxis />
                 <RC.Tooltip />
-                <RC.Area type="monotone" dataKey="balance" stroke="#10b981" fill="#10b98133" />
+                <RC.Area type="monotone" dataKey="balance" stroke="#a24a4aff" fill="#10b98133" />
               </RC.AreaChart>
               </RC.ResponsiveContainer>
             </div>

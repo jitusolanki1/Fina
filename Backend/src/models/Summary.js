@@ -7,6 +7,7 @@ const PerAccountSchema = new mongoose.Schema({
   openingBefore: Number,
   txCount: Number,
   deposit: Number,
+  penalDeposit: Number,
   otherDeposit: Number,
   upLineDeposit: Number,
   penalWithdrawal: Number,

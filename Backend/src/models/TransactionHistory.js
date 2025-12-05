@@ -7,6 +7,7 @@ const TransactionHistorySchema = new mongoose.Schema({
   deposit: { type: Number, default: 0 },
   otherDeposit: { type: Number, default: 0 },
   upLineDeposit: { type: Number, default: 0 },
+  penalDeposit: { type: Number, default: 0 },
   penalWithdrawal: { type: Number, default: 0 },
   otherWithdrawal: { type: Number, default: 0 },
   upLineWithdrawal: { type: Number, default: 0 },

@@ -178,6 +178,7 @@ function SummaryDetail({ summary, aggregate, onBack }) {
                 </td>
                 <NumberCell v={a.openingBefore} />
                 <NumberCell v={a.deposit} />
+                <NumberCell v={a.penalDeposit} className="hidden md:table-cell" />
                 <NumberCell v={a.otherDeposit} className="hidden md:table-cell" />
                 <NumberCell v={a.upLineDeposit} className="hidden md:table-cell" />
                 <NumberCell v={a.penalWithdrawal} className="hidden md:table-cell" />
@@ -196,6 +197,8 @@ function SummaryDetail({ summary, aggregate, onBack }) {
                       <div className="text-right">{Number(a.deposit || 0).toLocaleString()}</div>
                       <div className="text-neutral-400 text-xs">Other Deposit</div>
                       <div className="text-right">{Number(a.otherDeposit || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">Penal Deposit</div>
+                      <div className="text-right">{Number(a.penalDeposit || 0).toLocaleString()}</div>
                       <div className="text-neutral-400 text-xs">UpLine Deposit</div>
                       <div className="text-right">{Number(a.upLineDeposit || 0).toLocaleString()}</div>
                       <div className="text-neutral-400 text-xs">Penal Withdrawal</div>

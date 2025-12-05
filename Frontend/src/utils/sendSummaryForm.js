@@ -16,12 +16,14 @@
 
 // XLSX is relatively large. Dynamically import it only when we need to generate an export.
 import { presignUpload } from "../services/uploadsService";
+import { listHistory } from "../services/historyService";
 
 function buildPerAccountRows(summary) {
   const rows = (summary.perAccount || []).map((p) => ({
     AccountName: p.accountName,
     OpeningBefore: Number(p.openingBefore || 0),
     Deposit: Number(p.deposit || 0),
+    PenalDeposit: Number(p.penalDeposit || 0),
     UpLineDeposit: Number(p.upLineDeposit || 0),
     OtherDeposit: Number(p.otherDeposit || 0),
     PenalWithdrawal: Number(p.penalWithdrawal || 0),
@@ -71,6 +73,7 @@ function buildCsvString(summary) {
       "AccountName",
       "OpeningBefore",
       "Deposit",
+      "PenalDeposit",
       "UpLineDeposit",
       "OtherDeposit",
       "PenalWithdrawal",
@@ -87,6 +90,7 @@ function buildCsvString(summary) {
         csvEscape(p.accountName),
         csvEscape(p.openingBefore || 0),
         csvEscape(p.deposit || 0),
+        csvEscape(p.penalDeposit || 0),
         csvEscape(p.upLineDeposit || 0),
         csvEscape(p.otherDeposit || 0),
         csvEscape(p.penalWithdrawal || 0),
@@ -98,6 +102,94 @@ function buildCsvString(summary) {
     );
   }
 
+  // If transaction-level rows are available, include them (with Description)
+  if (summary.txs && summary.txs.length) {
+    lines.push("");
+    lines.push(
+      [
+        "Date",
+        "Account",
+        "Description",
+        "Deposit",
+        "PenalDeposit",
+        "UpLineDeposit",
+        "OtherDeposit",
+        "PenalWithdrawal",
+        "UpLineWithdrawal",
+        "OtherWithdrawal",
+        "CreatedBy",
+      ].join(",")
+    );
+    for (const t of summary.txs) {
+      lines.push(
+        [
+          csvEscape(t.date || ""),
+          csvEscape(t.accountName || t.account || ""),
+          csvEscape(t.description || ""),
+          csvEscape(t.deposit || 0),
+          csvEscape(t.penalDeposit || 0),
+          csvEscape(t.upLineDeposit || 0),
+          csvEscape(t.otherDeposit || 0),
+          csvEscape(t.penalWithdrawal || 0),
+          csvEscape(t.upLineWithdrawal || 0),
+          csvEscape(t.otherWithdrawal || 0),
+          csvEscape(t.createdBy || ""),
+        ].join(",")
+      );
+    }
+
+    // append totals for transactions
+    const totals = summary.txs.reduce(
+      (acc, x) => {
+        acc.deposit += Number(x.deposit || 0);
+        acc.penalDeposit += Number(x.penalDeposit || 0);
+        acc.upLineDeposit += Number(x.upLineDeposit || 0);
+        acc.otherDeposit += Number(x.otherDeposit || 0);
+        acc.penalWithdrawal += Number(x.penalWithdrawal || 0);
+        acc.upLineWithdrawal += Number(x.upLineWithdrawal || 0);
+        acc.otherWithdrawal += Number(x.otherWithdrawal || 0);
+        return acc;
+      },
+      { deposit: 0, penalDeposit: 0, upLineDeposit: 0, otherDeposit: 0, penalWithdrawal: 0, upLineWithdrawal: 0, otherWithdrawal: 0 }
+    );
+
+    lines.push("");
+    lines.push([
+      "",
+      "TOTALS",
+      "",
+      csvEscape(totals.deposit),
+      csvEscape(totals.penalDeposit),
+      csvEscape(totals.upLineDeposit),
+      csvEscape(totals.otherDeposit),
+      csvEscape(totals.penalWithdrawal),
+      csvEscape(totals.upLineWithdrawal),
+      csvEscape(totals.otherWithdrawal),
+      "",
+    ].join(","));
+
+    // per-user breakdown
+    const perUser = {};
+    for (const x of summary.txs) {
+      const u = x.createdBy || "Unknown";
+      if (!perUser[u]) perUser[u] = { count: 0, deposit: 0, penalDeposit: 0, upLineDeposit: 0, otherDeposit: 0, penalWithdrawal: 0, upLineWithdrawal: 0, otherWithdrawal: 0 };
+      perUser[u].count += 1;
+      perUser[u].deposit += Number(x.deposit || 0);
+      perUser[u].penalDeposit += Number(x.penalDeposit || 0);
+      perUser[u].upLineDeposit += Number(x.upLineDeposit || 0);
+      perUser[u].otherDeposit += Number(x.otherDeposit || 0);
+      perUser[u].penalWithdrawal += Number(x.penalWithdrawal || 0);
+      perUser[u].upLineWithdrawal += Number(x.upLineWithdrawal || 0);
+      perUser[u].otherWithdrawal += Number(x.otherWithdrawal || 0);
+    }
+
+    lines.push("");
+    lines.push(["User","Count","Deposit","PenalDeposit","UpLineDeposit","OtherDeposit","PenalWithdrawal","UpLineWithdrawal","OtherWithdrawal","Net"].join(","));
+    for (const [u, d] of Object.entries(perUser)) {
+      const net = d.deposit + d.penalDeposit + d.upLineDeposit + d.otherDeposit - d.penalWithdrawal - d.upLineWithdrawal - d.otherWithdrawal;
+      lines.push([csvEscape(u), csvEscape(d.count), csvEscape(d.deposit), csvEscape(d.penalDeposit), csvEscape(d.upLineDeposit), csvEscape(d.otherDeposit), csvEscape(d.penalWithdrawal), csvEscape(d.upLineWithdrawal), csvEscape(d.otherWithdrawal), csvEscape(net)].join(","));
+    }
+  }
   lines.push("");
   lines.push("Metric,Value");
   const o = summary.overall || {};
@@ -128,6 +220,44 @@ export async function generateSummaryXlsxBlob(summary) {
   const overallRows = buildOverallRows(summary);
   const overallSheet = SheetJS.utils.json_to_sheet(overallRows);
   SheetJS.utils.book_append_sheet(wb, overallSheet, "Overall");
+
+  // Transactions sheet (if available)
+  const txs = summary.txs || summary.transactions || [];
+  if (txs && txs.length) {
+    const txRows = txs.map((t) => ({
+      Date: t.date || "",
+      Account: t.accountName || t.account || "",
+      Description: t.description || "",
+      Deposit: Number(t.deposit || 0),
+      PenalDeposit: Number(t.penalDeposit || 0),
+      UpLineDeposit: Number(t.upLineDeposit || 0),
+      OtherDeposit: Number(t.otherDeposit || 0),
+      PenalWithdrawal: Number(t.penalWithdrawal || 0),
+      UpLineWithdrawal: Number(t.upLineWithdrawal || 0),
+      OtherWithdrawal: Number(t.otherWithdrawal || 0),
+      CreatedBy: t.createdBy || "",
+    }));
+    const txSheet = SheetJS.utils.json_to_sheet(txRows, { header: Object.keys(txRows[0] || {}) });
+    SheetJS.utils.book_append_sheet(wb, txSheet, "Transactions");
+
+    // Per-user aggregate sheet
+    const perUserMap = {};
+    for (const t of txRows) {
+      const u = t.CreatedBy || "Unknown";
+      if (!perUserMap[u]) perUserMap[u] = { User: u, Count: 0, Deposit: 0, PenalDeposit: 0, UpLineDeposit: 0, OtherDeposit: 0, PenalWithdrawal: 0, UpLineWithdrawal: 0, OtherWithdrawal: 0 };
+      perUserMap[u].Count += 1;
+      perUserMap[u].Deposit += Number(t.Deposit || 0);
+      perUserMap[u].PenalDeposit += Number(t.PenalDeposit || 0);
+      perUserMap[u].UpLineDeposit += Number(t.UpLineDeposit || 0);
+      perUserMap[u].OtherDeposit += Number(t.OtherDeposit || 0);
+      perUserMap[u].PenalWithdrawal += Number(t.PenalWithdrawal || 0);
+      perUserMap[u].UpLineWithdrawal += Number(t.UpLineWithdrawal || 0);
+      perUserMap[u].OtherWithdrawal += Number(t.OtherWithdrawal || 0);
+    }
+    const perUserRows = Object.values(perUserMap);
+    const puSheet = SheetJS.utils.json_to_sheet(perUserRows, { header: Object.keys(perUserRows[0] || {}) });
+    SheetJS.utils.book_append_sheet(wb, puSheet, "PerUser");
+  }
 
   // add metadata sheet
   const meta = [
@@ -162,6 +292,22 @@ export async function sendSummaryViaFormspree(
 
   // Primary path: do NOT upload binary files by default — free Formspree forms block attachments.
   // Send a JSON payload (works with Formspree) that includes CSV text and the summary JSON.
+  // Try to include transaction-level rows in CSV/XLSX if available. If not present on the summary,
+  // attempt to fetch archived transactions for the summary.range (created by createSummaryRange).
+  let txs = summary.txs || summary.transactions || null;
+  if ((!txs || txs.length === 0) && summary && summary.date) {
+    try {
+      // history entries created during summary creation include `summaryRange` set to the summary.date
+      txs = await listHistory({ summaryRange: summary.date });
+    } catch (err) {
+      console.info("Could not fetch history transactions for summary", err && err.message);
+      txs = null;
+    }
+  }
+
+  // if we fetched txs, attach to summary for XLSX building
+  if (txs && txs.length) summary.txs = txs;
+
   const csv = buildCsvString(summary);
   const payload = {
     subject: `Summary ${summary.date || "(range)"}`,

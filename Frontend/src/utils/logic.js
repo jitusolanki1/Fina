@@ -5,12 +5,13 @@ export function runningBalances(openingBalance = 0, transactions = []) {
   let bal = Number(openingBalance) || 0;
   return transactions.map((t, idx) => {
     const deposit = Number(t.deposit || 0);
+    const penalDeposit = Number(t.penalDeposit || 0);
     const otherDeposit = Number(t.otherDeposit || 0);
     const upLineDeposit = Number(t.upLineDeposit || 0);
     const penalWithdrawal = Number(t.penalWithdrawal || 0);
     const otherWithdrawal = Number(t.otherWithdrawal || 0);
     const upLineWithdrawal = Number(t.upLineWithdrawal || 0);
-    bal = bal + deposit + otherDeposit + upLineDeposit - penalWithdrawal - otherWithdrawal - upLineWithdrawal;
+    bal = bal + deposit + penalDeposit + otherDeposit + upLineDeposit - penalWithdrawal - otherWithdrawal - upLineWithdrawal;
     return {
       ...t,
       balance: bal,
@@ -33,6 +34,7 @@ export function totalsFor(account = {}, transactions = []) {
   const totals = txs.reduce(
     (acc, t) => {
       acc.totalDeposit += Number(t.deposit || 0);
+      acc.totalPenalDeposit += Number(t.penalDeposit || 0);
       acc.totalOtherDeposit += Number(t.otherDeposit || 0);
       acc.totalUpLineDeposit += Number(t.upLineDeposit || 0);
       acc.totalPenalWithdrawal += Number(t.penalWithdrawal || 0);
@@ -42,6 +44,7 @@ export function totalsFor(account = {}, transactions = []) {
     },
     {
       totalDeposit: 0,
+      totalPenalDeposit: 0,
       totalOtherDeposit: 0,
       totalUpLineDeposit: 0,
       totalPenalWithdrawal: 0,
@@ -53,8 +56,9 @@ export function totalsFor(account = {}, transactions = []) {
   const finalBalance =
     opening +
     totals.totalDeposit +
+    totals.totalPenalDeposit +
     totals.totalOtherDeposit +
-    totals.totalUpLineDeposit -
+    totals.totalUpLineDeposit +
     totals.totalPenalWithdrawal -
     totals.totalOtherWithdrawal -
     totals.totalUpLineWithdrawal;

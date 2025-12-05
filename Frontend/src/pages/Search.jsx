@@ -182,10 +182,51 @@ function SearchPage() {
     localStorage.removeItem("searchHistory_v1");
   }
 
+  // compute totals and per-user aggregates for display and export
+  const totals = useMemo(() => {
+    const t = { deposit: 0, penalDeposit: 0, otherDeposit: 0, penalWithdrawal: 0, otherWithdrawal: 0 };
+    for (const r of results) {
+      t.deposit += Number(r.deposit || 0);
+      t.penalDeposit += Number(r.penalDeposit || 0);
+      t.otherDeposit += Number(r.otherDeposit || 0);
+      t.penalWithdrawal += Number(r.penalWithdrawal || 0);
+      t.otherWithdrawal += Number(r.otherWithdrawal || 0);
+    }
+    t.net = t.deposit + t.penalDeposit + t.otherDeposit - t.penalWithdrawal - t.otherWithdrawal;
+    return t;
+  }, [results]);
+
+  const perUser = useMemo(() => {
+    const map = {};
+    for (const r of results) {
+      const key = r.createdBy || r.createdByName || r.createdByEmail || r.createdById || 'Unknown';
+      if (!map[key]) map[key] = { deposit: 0, penalDeposit: 0, otherDeposit: 0, penalWithdrawal: 0, otherWithdrawal: 0, count: 0 };
+      map[key].deposit += Number(r.deposit || 0);
+      map[key].penalDeposit += Number(r.penalDeposit || 0);
+      map[key].otherDeposit += Number(r.otherDeposit || 0);
+      map[key].penalWithdrawal += Number(r.penalWithdrawal || 0);
+      map[key].otherWithdrawal += Number(r.otherWithdrawal || 0);
+      map[key].count += 1;
+    }
+    return map;
+  }, [results]);
+
   function downloadResultsCSV() {
     if (!results || results.length === 0) return;
-    const header = ["Date", "Account", "Description", "Deposit", "OtherDeposit", "PenalWithdrawal", "OtherWithdrawal"];
-    const rows = [header].concat(results.map((r) => [r.date || "", r.accountName || "", r.description || "", r.deposit || 0, r.otherDeposit || 0, r.penalWithdrawal || 0, r.otherWithdrawal || 0]));
+    const header = ["Date", "Account", "Description", "Deposit", "PenalDeposit", "OtherDeposit", "PenalWithdrawal", "OtherWithdrawal"];
+    const rows = [header].concat(results.map((r) => [r.date || "", r.accountName || "", r.description || "", r.deposit || 0, r.penalDeposit || 0, r.otherDeposit || 0, r.penalWithdrawal || 0, r.otherWithdrawal || 0]));
+
+    // append overall totals
+    rows.push(["", "TOTALS", "", totals.deposit, totals.penalDeposit, totals.otherDeposit, totals.penalWithdrawal, totals.otherWithdrawal]);
+
+    // append per-user breakdown
+    rows.push([]);
+    rows.push(["User", "Count", "Deposit", "PenalDeposit", "OtherDeposit", "PenalWithdrawal", "OtherWithdrawal", "Net"]);
+    for (const [user, data] of Object.entries(perUser)) {
+      const net = data.deposit + data.penalDeposit + data.otherDeposit - data.penalWithdrawal - data.otherWithdrawal;
+      rows.push([user, data.count, data.deposit, data.penalDeposit, data.otherDeposit, data.penalWithdrawal, data.otherWithdrawal, net]);
+    }
+
     csvDownload(`search-results-${new Date().toISOString().slice(0,10)}.csv`, rows);
   }
 
@@ -271,6 +312,74 @@ function SearchPage() {
           </div>
         </div>
 
+        {results.length > 0 && (
+          <>
+            <div className="mb-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+              <div className="p-2 bg-[#050506] rounded">
+                <div className="text-xs text-slate-400">Deposits</div>
+                <div className="text-lg">{totals.deposit.toLocaleString()}</div>
+              </div>
+              <div className="p-2 bg-[#050506] rounded">
+                <div className="text-xs text-slate-400">Penal Deposit</div>
+                <div className="text-lg">{totals.penalDeposit.toLocaleString()}</div>
+              </div>
+              <div className="p-2 bg-[#050506] rounded">
+                <div className="text-xs text-slate-400">Other Deposit</div>
+                <div className="text-lg">{totals.otherDeposit.toLocaleString()}</div>
+              </div>
+              <div className="p-2 bg-[#050506] rounded">
+                <div className="text-xs text-slate-400">Penal Withdrawal</div>
+                <div className="text-lg">{totals.penalWithdrawal.toLocaleString()}</div>
+              </div>
+              <div className="p-2 bg-[#050506] rounded">
+                <div className="text-xs text-slate-400">Other Withdrawal</div>
+                <div className="text-lg">{totals.otherWithdrawal.toLocaleString()}</div>
+              </div>
+              <div className="p-2 bg-[#050506] rounded">
+                <div className="text-xs text-slate-400">Net</div>
+                <div className="text-lg">{totals.net.toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div className="mb-3 bg-[#050506] p-2 rounded text-sm">
+              <div className="font-medium mb-2">Per-user breakdown</div>
+              <div className="overflow-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-slate-400">
+                      <th className="p-1">User</th>
+                      <th className="p-1 text-right">Count</th>
+                      <th className="p-1 text-right">Deposit</th>
+                      <th className="p-1 text-right">PenalDep</th>
+                      <th className="p-1 text-right">OtherDep</th>
+                      <th className="p-1 text-right">PenalW</th>
+                      <th className="p-1 text-right">OtherW</th>
+                      <th className="p-1 text-right">Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(perUser).map(([user, d]) => {
+                      const net = d.deposit + d.penalDeposit + d.otherDeposit - d.penalWithdrawal - d.otherWithdrawal;
+                      return (
+                        <tr key={user} className="border-t border-gray-800">
+                          <td className="p-1 truncate" style={{maxWidth: 200}}>{user}</td>
+                          <td className="p-1 text-right">{d.count}</td>
+                          <td className="p-1 text-right">{Number(d.deposit).toLocaleString()}</td>
+                          <td className="p-1 text-right">{Number(d.penalDeposit).toLocaleString()}</td>
+                          <td className="p-1 text-right">{Number(d.otherDeposit).toLocaleString()}</td>
+                          <td className="p-1 text-right">{Number(d.penalWithdrawal).toLocaleString()}</td>
+                          <td className="p-1 text-right">{Number(d.otherWithdrawal).toLocaleString()}</td>
+                          <td className="p-1 text-right">{Number(net).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
         <div className="overflow-auto rounded bg-[#070708] border border-gray-800">
           <table className="min-w-full text-sm table-fixed">
             <thead>
@@ -280,6 +389,7 @@ function SearchPage() {
                   <th className="p-2">Opening</th>
                   <th className="p-2">Description</th>
                   <th className="p-2 text-right">Deposit</th>
+                  <th className="p-2 text-right">PenalDep</th>
                   <th className="p-2 text-right">OtherDep</th>
                   <th className="p-2 text-right">PenalW</th>
                   <th className="p-2 text-right">OtherW</th>
@@ -293,6 +403,7 @@ function SearchPage() {
                   <td className="p-2 text-right num-col">{Number(r.accountOpening || 0).toLocaleString()}</td>
                   <td className="p-2 truncate" style={{maxWidth: 360}}>{r.description}</td>
                   <td className="p-2 text-right num-col">{Number(r.deposit||0).toLocaleString()}</td>
+                  <td className="p-2 text-right num-col">{Number(r.penalDeposit||0).toLocaleString()}</td>
                   <td className="p-2 text-right num-col">{Number(r.otherDeposit||0).toLocaleString()}</td>
                   <td className="p-2 text-right num-col">{Number(r.penalWithdrawal||0).toLocaleString()}</td>
                   <td className="p-2 text-right num-col">{Number(r.otherWithdrawal||0).toLocaleString()}</td>

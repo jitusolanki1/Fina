@@ -43,6 +43,7 @@ router.post("/manual", requireAuth, async (req, res) => {
         Date: t.date,
         Description: t.description || "",
         Deposit: Number(t.deposit || 0),
+        PenalDeposit: Number(t.penalDeposit || 0),
         OtherDeposit: Number(t.otherDeposit || 0),
         UpLineDeposit: Number(t.upLineDeposit || 0),
         PenalWithdrawal: Number(t.penalWithdrawal || 0),
@@ -56,6 +57,7 @@ router.post("/manual", requireAuth, async (req, res) => {
       const totals = rows.reduce(
         (acc, r) => {
           acc.Deposit += Number(r.Deposit || 0);
+          acc.PenalDeposit += Number(r.PenalDeposit || 0);
           acc.OtherDeposit += Number(r.OtherDeposit || 0);
           acc.UpLineDeposit += Number(r.UpLineDeposit || 0);
           acc.PenalWithdrawal += Number(r.PenalWithdrawal || 0);
@@ -63,7 +65,7 @@ router.post("/manual", requireAuth, async (req, res) => {
           acc.UpLineWithdrawal += Number(r.UpLineWithdrawal || 0);
           return acc;
         },
-        { Deposit: 0, OtherDeposit: 0, UpLineDeposit: 0, PenalWithdrawal: 0, OtherWithdrawal: 0, UpLineWithdrawal: 0 }
+        { Deposit: 0, PenalDeposit: 0, OtherDeposit: 0, UpLineDeposit: 0, PenalWithdrawal: 0, OtherWithdrawal: 0, UpLineWithdrawal: 0 }
       );
 
       // append totals row
@@ -71,6 +73,7 @@ router.post("/manual", requireAuth, async (req, res) => {
         Date: "",
         Description: "Total",
         Deposit: totals.Deposit,
+        PenalDeposit: totals.PenalDeposit,
         OtherDeposit: totals.OtherDeposit,
         UpLineDeposit: totals.UpLineDeposit,
         PenalWithdrawal: totals.PenalWithdrawal,
