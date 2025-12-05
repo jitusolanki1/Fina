@@ -54,6 +54,26 @@ export default function Sidebar({
   const [ariaHidden, setAriaHidden] = useState(!open);
   const navigate = useNavigate();
 
+  // Defer calling onClose until next frame so router can process navigation
+  // and active classes update without the sidebar being hidden immediately.
+  function handleNavCloseDeferred() {
+    if (!onClose) return;
+    try {
+      requestAnimationFrame(() => {
+        try {
+          onClose();
+        } catch (e) {}
+      });
+    } catch (e) {
+      // fallback
+      setTimeout(() => {
+        try {
+          onClose();
+        } catch (e) {}
+      }, 0);
+    }
+  }
+
   // helper: set inert (native) or fallback (aria-hidden + pointerEvents)
   function setInertState(el, inert) {
     if (!el) return;
@@ -251,13 +271,13 @@ export default function Sidebar({
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <NavLink to="/account-create" onClick={onClose}>
+              <NavLink to="/account-create" onClick={handleNavCloseDeferred}>
                 <div className="quick-create">
                   <Plus size={14} />
                   <span className="sidebar-label">Quick Create</span>
                 </div>
               </NavLink>
-              <NavLink to="/messages" onClick={onClose}>
+              <NavLink to="/messages" onClick={handleNavCloseDeferred}>
                 <div className="mail-btn" title="Messages">
                   <Mail size={16} />
                 </div>
@@ -274,7 +294,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <Home className="nav-icon " />
               <span className="sidebar-label">Dashboard</span>
@@ -284,7 +304,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <Grid className="nav-icon" />
               <span className="sidebar-label">Accounts</span>
@@ -295,7 +315,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <BarChart2 className="nav-icon" />
               <span className="sidebar-label">Ciw Summary</span>
@@ -306,7 +326,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <List className="nav-icon" size={16} />
               <span className="sidebar-label">Projects</span>
@@ -317,7 +337,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <Users className="nav-icon" />
               <span className="sidebar-label">Team</span>
@@ -331,7 +351,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <Clock className="nav-icon" />
               <span className="sidebar-label">Settings</span>
@@ -343,7 +363,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <FileText className="nav-icon" />
               <span className="sidebar-label">Documents</span>
@@ -354,7 +374,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <Database className="nav-icon" />
               <span className="sidebar-label">Data Library</span>
@@ -365,7 +385,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <BarChart2 className="nav-icon" />
               <span className="sidebar-label">Reports</span>
@@ -376,7 +396,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <Search className="nav-icon" />
               <span className="sidebar-label">Search</span>
@@ -387,7 +407,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <Cloud className="nav-icon" />
               <span className="sidebar-label">Word Assistant</span>
@@ -398,7 +418,7 @@ export default function Sidebar({
               className={({ isActive }) =>
                 isActive ? "nav-item active" : "nav-item"
               }
-              onClick={onClose}
+              onClick={handleNavCloseDeferred}
             >
               <HelpCircle className="nav-icon" />
               <span className="sidebar-label">Help</span>
