@@ -1,4 +1,3 @@
-// Sidebar.jsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   BarChart2,
