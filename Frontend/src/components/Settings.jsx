@@ -15,9 +15,7 @@ const Settings = () => {
   const [githubStatus, setGithubStatus] = useState(null);
   const [currentUser, setCurrentUser] = useState(user);
   const [committing, setCommitting] = useState(false);
-  const [timezone, setTimezone] = useState(
-    currentUser?.timezone
-  );
+  const [timezone, setTimezone] = useState(currentUser?.timezone);
   const [autoCommit, setAutoCommit] = useState(currentUser?.autoCommit);
   const [commitTime, setCommitTime] = useState(currentUser?.commitTime);
 

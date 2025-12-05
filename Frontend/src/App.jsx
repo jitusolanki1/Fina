@@ -23,6 +23,7 @@ const LoginPage = lazy(() => import("./components/auth/Login"));
 const RegisterPage = lazy(() => import("./components/auth/Register"));
 const MailsPage = lazy(() => import("./components/campagin/Tamplates"));
 const TeamPage = lazy(() => import("./pages/Team"));
+const ProfilePage = lazy(() => import("./pages/Profile"));
 const Projects = lazy(() => import("./pages/Projects"));
 const Documents = lazy(() => import("./pages/Documents"));
 const DataLibrary = lazy(() => import("./pages/DataLibrary"));
@@ -205,6 +206,14 @@ function AppRoutes({
           element={
             <ProtectedRoute>
               <TeamPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

@@ -1,5 +1,5 @@
 // Sidebar.jsx
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   BarChart2,
   Clock,
@@ -18,10 +18,12 @@ import {
   ChevronRight,
   Target,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import avatar from "../../assets/avatar.jpeg";
+import { fetchJson } from "../../fetchClient";
 
 export default function Sidebar({
   open = true,
@@ -34,6 +36,16 @@ export default function Sidebar({
   const user = auth.user || {};
   const navigate = useNavigate();
   const asideRef = useRef(null);
+
+  const [me, setMe] = useState(user || null);
+
+  function getInitials(name) {
+    const s = String(name || "").trim();
+    if (!s) return "U";
+    const parts = s.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + (parts[1][0] || "")).slice(0, 2).toUpperCase();
+  }
 
   // Close helper used after navigation (keeps behaviour similar to original)
   function handleNavClose() {
@@ -63,6 +75,21 @@ export default function Sidebar({
       body.style.overflow = "";
     };
   }, [open]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetchJson("/auth/me", { method: "GET" });
+        if (mounted && res && res.user) setMe(res.user);
+      } catch (e) {
+        // ignore
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const collapsedClass = collapsed ? "collapsed" : "";
   const mobileTranslate = open
@@ -178,18 +205,6 @@ export default function Sidebar({
 
           <div className="flex flex-col gap-1 mt-2">
             <NavLink
-              to="/settings"
-              title="Settings"
-              className={({ isActive }) =>
-                isActive ? "nav-item active" : "nav-item"
-              }
-              onClick={handleNavClose}
-            >
-              <Clock className="nav-icon" />
-              <span className="sidebar-label">Settings</span>
-            </NavLink>
-
-            <NavLink
               to="/documents"
               title="Documents"
               className={({ isActive }) =>
@@ -250,6 +265,18 @@ export default function Sidebar({
             </NavLink>
 
             <NavLink
+              to="/settings"
+              title="Settings"
+              className={({ isActive }) =>
+                isActive ? "nav-item active" : "nav-item"
+              }
+              onClick={handleNavClose}
+            >
+              <Settings className="nav-icon" />
+              <span className="sidebar-label">Settings</span>
+            </NavLink>
+
+            <NavLink
               to="/help"
               title="Help"
               className={({ isActive }) =>
@@ -290,15 +317,30 @@ export default function Sidebar({
               style={{ justifyContent: "space-between" }}
             >
               <div className="flex items-center gap-1 sidebar-label">
-                <img src={avatar} alt="user" className="avatar" />
-                <div className="sidebar-label">
-                  <div className="user-name font-semibold text-sm">
-                    {user?.name || user?.email || "User"}
+                <button
+                  onClick={() => safeNavigate("/profile")}
+                  className="flex items-center gap-1  rounded "
+                >
+                  {me?.github && (me.github.avatarUrl || me.github.username) ? (
+                    <img
+                      src={me.github.avatarUrl || `https://github.com/${me.github.username}.png?size=80`}
+                      alt="user"
+                      className="avatar"
+                    />
+                  ) : (
+                    <div className="avatar bg-[#0F1724] flex items-center justify-center text-sm font-semibold text-slate-100">
+                      {getInitials(user?.name || user?.email || "U")}
+                    </div>
+                  )}
+                  <div className="sidebar-label text-left">
+                    <div className="user-name font-semibold text-sm">
+                      {user?.name || user?.user || "User"}
+                    </div>
+                    <div className="user-email text-xs opacity-70">
+                      {user?.email || ""}
+                    </div>
                   </div>
-                  <div className="user-email text-xs opacity-70">
-                    {user?.email || ""}
-                  </div>
-                </div>
+                </button>
               </div>
               <div className="nav-icon flex items-center gap-2">
                 <SignOutButton onClose={onClose} />

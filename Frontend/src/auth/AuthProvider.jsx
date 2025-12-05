@@ -38,8 +38,7 @@ export function AuthProvider({ children }) {
       const data = await fetchJson('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
       if (data?.token) {
         setToken(data.token);
-        setUser(data.user || { email });
-        // store dev fallback refresh token if provided (for cross-origin dev flows)
+        setUser(data.user || { username: email });
         try { if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken); } catch (e) {}
         return { ok: true };
       }
