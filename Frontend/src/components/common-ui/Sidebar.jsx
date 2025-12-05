@@ -1,3 +1,5 @@
+// Sidebar.jsx
+import React, { useEffect, useRef, useState } from "react";
 import {
   BarChart2,
   Clock,
@@ -17,11 +19,22 @@ import {
   Target,
   LogOut,
 } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import avatar from "../../assets/avatar.jpeg";
 
+/**
+ * Keep UI/markup exactly as provided.
+ * Fixes applied:
+ * - SSR-safe checks for document/window
+ * - Robust inert handling with fallback (aria-hidden + pointer-events)
+ * - Prevent focus trap when closing (moves focus, waits a few frames)
+ * - Cancels any pending requestAnimationFrame on cleanup
+ * - Uses router navigate for login/register with window fallback
+ * - Handles sync/async logout safely
+ *
+ * This file is plain JSX (no TypeScript) to match your request.
+ */
 export default function Sidebar({
   open = true,
   collapsed = false,
@@ -29,92 +42,139 @@ export default function Sidebar({
   onToggleCollapse,
 }) {
   const collapsedClass = collapsed ? "collapsed" : "";
-    const { isAuthenticated, user } = useAuth() || {};
+  const auth = useAuth() || {};
+  const isAuthenticated = !!auth.isAuthenticated;
+  const user = auth.user;
 
   const mobileTranslate = open
     ? "translate-x-0 md:translate-x-0"
     : "-translate-x-full md:translate-x-0";
-  
+
   const asideRef = useRef(null);
-  // Use a local ariaHidden flag so we can move focus off the sidebar
-  // before actually setting aria-hidden (avoids hiding a focused element).
-  const [ariaHidden, setAriaHidden] = useState(false);
+  const rafRef = useRef(null);
+  const [ariaHidden, setAriaHidden] = useState(!open);
+  const navigate = useNavigate();
+
+  // helper: set inert (native) or fallback (aria-hidden + pointerEvents)
+  function setInertState(el, inert) {
+    if (!el) return;
+    try {
+      // native inert support (may throw in some SSR or older browsers)
+      // eslint-disable-next-line no-undef
+      if (
+        typeof HTMLElement !== "undefined" &&
+        "inert" in HTMLElement.prototype
+      ) {
+        // @ts-ignore - some environments don't include inert in typings
+        el.inert = !!inert;
+        if (inert) el.setAttribute("inert", "");
+        else el.removeAttribute("inert");
+        return;
+      }
+    } catch (e) {
+      // fall through to fallback
+    }
+
+    // fallback: make non-interactive
+    if (inert) {
+      el.setAttribute("aria-hidden", "true");
+      el.style.pointerEvents = "none";
+    } else {
+      el.removeAttribute("aria-hidden");
+      el.style.pointerEvents = "";
+    }
+  }
 
   useEffect(() => {
     const asideEl = asideRef.current;
+
+    // Opening: make visible and interactive
     if (open) {
-      // opening: make visible to AT and remove inert
       setAriaHidden(false);
-      if (asideEl) {
-        try {
-          asideEl.inert = false;
-          asideEl.removeAttribute("inert");
-        } catch (e) {}
-      }
+      setInertState(asideEl, false);
       return;
     }
 
-    // closing: ensure no focused element is inside the aside before hiding
-    const active = typeof document !== "undefined" ? document.activeElement : null;
-    const containsFocus = asideEl && active && asideEl.contains(active);
+    // Closing: ensure no focused element remains inside aside before hiding
+    const active =
+      typeof document !== "undefined" ? document.activeElement : null;
+    const containsFocus =
+      asideEl && active && asideEl.contains && asideEl.contains(active);
 
     const setHiddenNow = () => {
       setAriaHidden(true);
-      if (asideEl) {
-        try {
-          asideEl.inert = true;
-          asideEl.setAttribute("inert", "");
-        } catch (e) {}
-      }
+      setInertState(asideEl, true);
     };
 
-    // Helper moves focus to a safe target then hides the aside.
     const moveFocusThenHide = () => {
-      const fallback = (typeof document !== "undefined" && document.getElementById("root")) || (typeof document !== "undefined" && document.body);
-      if (!fallback) return setHiddenNow();
+      if (typeof document === "undefined") {
+        setHiddenNow();
+        return;
+      }
 
-      const prevTab = fallback.getAttribute && fallback.getAttribute("tabindex");
+      const fallback =
+        document.getElementById("root") || (document.body && document.body);
+      if (!fallback) {
+        setHiddenNow();
+        return;
+      }
+
+      const prevTab =
+        fallback.getAttribute && fallback.getAttribute("tabindex");
       let addedTab = false;
       try {
         if (fallback.tabIndex === undefined || fallback.tabIndex < 0) {
           fallback.setAttribute("tabindex", "-1");
           addedTab = true;
         }
-        // Request focus synchronously; browsers may update document.activeElement on the next frame
         fallback.focus();
-      } catch (e) {}
+      } catch (e) {
+        // ignore focus errors
+      }
 
-      // Check for up to a few frames whether focus moved off the aside; otherwise blur and proceed.
-      const checkAndHide = (attempt = 0) => {
+      let attempts = 0;
+      const checkAndHide = () => {
+        attempts += 1;
         const nowActive = document.activeElement;
-        const stillInside = asideEl && nowActive && asideEl.contains(nowActive);
+        const stillInside =
+          asideEl &&
+          nowActive &&
+          asideEl.contains &&
+          asideEl.contains(nowActive);
         if (!stillInside) {
           try {
             if (addedTab) fallback.removeAttribute("tabindex");
-            else if (prevTab != null) fallback.setAttribute("tabindex", prevTab);
-          } catch (e) {}
+            else if (prevTab != null)
+              fallback.setAttribute("tabindex", prevTab);
+          } catch (e) {
+            // ignore
+          }
           setHiddenNow();
           return;
         }
 
-        if (attempt < 5) {
-          // wait a few frames for focus to settle
-          requestAnimationFrame(() => checkAndHide(attempt + 1));
+        if (attempts < 6) {
+          rafRef.current = requestAnimationFrame(checkAndHide);
           return;
         }
 
-        // give up waiting: blur the active element then hide
+        // give up waiting: blur and hide
         try {
-          nowActive && typeof nowActive.blur === "function" && nowActive.blur();
-        } catch (e) {}
+          if (nowActive && typeof nowActive.blur === "function")
+            nowActive.blur();
+        } catch (e) {
+          // ignore
+        }
         try {
           if (addedTab) fallback.removeAttribute("tabindex");
           else if (prevTab != null) fallback.setAttribute("tabindex", prevTab);
-        } catch (e) {}
+        } catch (e) {
+          // ignore
+        }
         setHiddenNow();
       };
 
-      requestAnimationFrame(() => checkAndHide(0));
+      rafRef.current = requestAnimationFrame(checkAndHide);
     };
 
     if (containsFocus) {
@@ -122,7 +182,32 @@ export default function Sidebar({
     } else {
       setHiddenNow();
     }
+
+    return () => {
+      // cleanup any pending RAF
+      if (rafRef.current != null) {
+        try {
+          cancelAnimationFrame(rafRef.current);
+        } catch (e) {
+          /* ignore */
+        }
+        rafRef.current = null;
+      }
+    };
+    // only depends on `open` so eslint-disable-next-line is okay
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // router-safe navigation (falls back to window.location.href)
+  function safeNavigate(to) {
+    try {
+      if (onClose) onClose();
+      navigate(to);
+    } catch (e) {
+      if (typeof window !== "undefined") window.location.href = to;
+    }
+  }
+
   return (
     <aside
       ref={asideRef}
@@ -324,13 +409,15 @@ export default function Sidebar({
 
         <div className="mt-auto">
           {!isAuthenticated ? (
-            <div className="nav-item" style={{ justifyContent: "space-between" }}>
+            <div
+              className="nav-item"
+              style={{ justifyContent: "space-between" }}
+            >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <button
                   className="page-btn"
                   onClick={() => {
-                    onClose && onClose();
-                    window.location.href = "/login";
+                    safeNavigate("/login");
                   }}
                 >
                   Login
@@ -338,8 +425,7 @@ export default function Sidebar({
                 <button
                   className="page-btn"
                   onClick={() => {
-                    onClose && onClose();
-                    window.location.href = "/register";
+                    safeNavigate("/register");
                   }}
                 >
                   Register
@@ -347,15 +433,26 @@ export default function Sidebar({
               </div>
             </div>
           ) : (
-            <div className="nav-item" style={{ justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="sidebar-label">
+            <div
+              className="nav-item"
+              style={{ justifyContent: "space-between" }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 10 }}
+                className="sidebar-label"
+              >
                 <img src={avatar} alt="user" className="avatar" />
                 <div className="sidebar-label">
-                  <div className="user-name">{user?.name || user?.email || 'User'}</div>
-                  <div className="user-email">{user?.email || ''}</div>
+                  <div className="user-name">
+                    {user?.name || user?.email || "User"}
+                  </div>
+                  <div className="user-email">{user?.email || ""}</div>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }} className="nav-icon">
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 8 }}
+                className="nav-icon"
+              >
                 <SignOutButton onClose={onClose} />
               </div>
             </div>
@@ -367,15 +464,27 @@ export default function Sidebar({
 }
 
 function SignOutButton({ onClose }) {
-  const { logout } = useAuth() || {};
+  const auth = useAuth() || {};
+  const logout = auth.logout;
   const navigate = useNavigate();
 
-  function handleSignOut() {
+  async function handleSignOut() {
     try {
-      logout && logout();
-    } catch (e) {}
-    onClose && onClose();
-    navigate("/login", { replace: true });
+      if (logout) {
+        const res = logout();
+        // support promise or sync
+        if (res && typeof res.then === "function") await res;
+      }
+    } catch (e) {
+      // ignore logout errors but continue to navigate away
+    } finally {
+      if (onClose) onClose();
+      try {
+        navigate("/login", { replace: true });
+      } catch (e) {
+        if (typeof window !== "undefined") window.location.href = "/login";
+      }
+    }
   }
 
   return (

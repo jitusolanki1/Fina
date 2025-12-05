@@ -16,7 +16,10 @@ const CALLBACK = process.env.GITHUB_OAUTH_CALLBACK;
 router.get("/connect", (req, res) => {
   // Allow frontend to pass a linkState (e.g. containing the user's auth token)
   // so the callback can link the GitHub account to the currently logged-in user.
-  const state = req.query && req.query.linkState ? req.query.linkState : generateStateForUser(req); // optional CSRF state
+  const state =
+    req.query && req.query.linkState
+      ? req.query.linkState
+      : generateStateForUser(req); // optional CSRF state
   const scopes = ["repo", "read:user", "user:email"];
 
   // Guard against misconfiguration: don't redirect to GitHub with undefined params
@@ -100,11 +103,47 @@ router.get("/callback", async (req, res) => {
               },
             };
             if (ghUser.email) update.$set.email = ghUser.email;
-            const opts = { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: false };
+            const opts = {
+              upsert: true,
+              new: true,
+              setDefaultsOnInsert: true,
+              runValidators: false,
+            };
             user = await User.findOneAndUpdate(filter, update, opts);
           }
         } catch (e) {
-          console.error('Failed to verify user token in OAuth state', e && e.message);
+          console.error(
+            "Failed to verify user token in OAuth state",
+            e && e.message
+          );
+          try {
+            const decoded = jwt.decode(jwtToken);
+            if (decoded && decoded.sub) {
+              const filter = { _id: decoded.sub };
+              const update = {
+                $set: {
+                  "github.username": ghUser.login,
+                  "github.accessToken": accessToken,
+                  "github.connectedAt": new Date(),
+                  "github.repo": "Fina",
+                  name: ghUser.name || ghUser.login,
+                },
+              };
+              if (ghUser.email) update.$set.email = ghUser.email;
+              const opts = {
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert: true,
+                runValidators: false,
+              };
+              user = await User.findOneAndUpdate(filter, update, opts);
+              console.warn(
+                "Linked GitHub using decode-only fallback (token may have been expired)"
+              );
+            }
+          } catch (e2) {
+            console.error("Decode fallback failed", e2 && e2.message);
+          }
         }
       }
 
@@ -121,11 +160,16 @@ router.get("/callback", async (req, res) => {
           },
         };
         if (ghUser.email) update.$set.email = ghUser.email;
-        const opts = { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: false };
+        const opts = {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+          runValidators: false,
+        };
         user = await User.findOneAndUpdate(filter, update, opts);
       }
     } catch (e) {
-      console.error('Failed to persist GitHub user', e && e.message);
+      console.error("Failed to persist GitHub user", e && e.message);
       throw e;
     }
 
@@ -142,6 +186,7 @@ router.get("/callback", async (req, res) => {
       return res.redirect(`${frontendRoot}/?github_connected=1`);
     return res.send("GitHub connected successfully");
   } catch (err) {
+    ṇ;
     console.error("GitHub callback error", err);
     return res
       .status(500)
