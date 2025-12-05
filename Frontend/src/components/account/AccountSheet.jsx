@@ -16,6 +16,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
   const [editingCell, setEditingCell] = useState(null);
   const [latest, setLatest] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
+  const [expandedTx, setExpandedTx] = useState(null);
 
   const queryClient = useQueryClient();
   const txQueryKey = ['transactions', account?.id, historyRange || 'live'];
@@ -38,7 +39,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
     setRawTxs(txs);
     setRows(runningBalances(account.openingBalance, txs));
 
-    // compute breakdown
+    // compute breakdown (derived from transactions)
     try {
       const opening = Number(account.openingBalance || 0);
       const extractKey = (desc) => {
@@ -50,14 +51,17 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
         return first || d;
       };
       const byKey = {};
-      let totalCr = 0; let totalDr = 0;
+      let totalCr = 0;
+      let totalDr = 0;
       for (const t of txs) {
         const key = extractKey(t.description || '');
         const cr = Number(t.deposit || 0) + Number(t.otherDeposit || 0) + Number(t.upLineDeposit || 0);
         const dr = Number(t.penalWithdrawal || 0) + Number(t.otherWithdrawal || 0) + Number(t.upLineWithdrawal || 0);
         if (!byKey[key]) byKey[key] = { key, cr: 0, dr: 0 };
-        byKey[key].cr += cr; byKey[key].dr += dr;
-        totalCr += cr; totalDr += dr;
+        byKey[key].cr += cr;
+        byKey[key].dr += dr;
+        totalCr += cr;
+        totalDr += dr;
       }
       const rowsB = Object.values(byKey).sort((a, b) => b.cr - a.cr);
       const closing = opening + totalCr - totalDr;
@@ -65,11 +69,16 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
     } catch (err) {
       console.error('breakdown compute failed', err);
     }
+  }, [txData, account]);
 
-    // load summaries
+  // Load latest summary for this account only when account changes (avoid refetching on every txData update)
+  useEffect(() => {
+    let mounted = true;
     (async () => {
+      if (!account || !account.id) return;
       try {
         const summaries = await listSummaries({ _sort: 'date', _order: 'desc' });
+        if (!mounted) return;
         for (const s of summaries) {
           const accSummary = s.perAccount.find((p) => String(p.accountId) === String(account.id));
           if (accSummary) { setLatest(accSummary); break; }
@@ -78,7 +87,8 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
         console.error('Could not load latest summary', err);
       }
     })();
-  }, [txData, account]);
+    return () => { mounted = false; };
+  }, [account && account.id]);
 
   const createMutation = useMutation({
     mutationFn: (payload) => createTransaction(payload),
@@ -108,11 +118,11 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
         <td className="p-2">{dateStr}</td>
         <td className="p-2">Opening Balance</td>
         <td className="p-2 text-center">{ob}</td>
-        <td className="p-2 text-center">0</td>
-        <td className="p-2 text-center">0</td>
-        <td className="p-2 text-center">0</td>
-        <td className="p-2 text-center">0</td>
-        <td className="p-2 text-center">0</td>
+        <td className="p-2 hidden md:table-cell text-center">0</td>
+        <td className="p-2 hidden md:table-cell text-center">0</td>
+        <td className="p-2 hidden md:table-cell text-center">0</td>
+        <td className="p-2 hidden md:table-cell text-center">0</td>
+        <td className="p-2 hidden md:table-cell text-center">0</td>
         <td className="p-2 font-medium text-slate-100 text-center">{ob}</td>
         <td className="p-2 text-center">&nbsp;</td>
       </tr>
@@ -338,19 +348,19 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                 <th className="p-2" style={{ width: "9%" }}>
                   Deposit
                 </th>
-                <th className="p-2" style={{ width: "9%" }}>
+                <th className="p-2 hidden md:table-cell" style={{ width: "9%" }}>
                   Other Dep
                 </th>
-                <th className="p-2" style={{ width: "9%" }}>
+                <th className="p-2 hidden md:table-cell" style={{ width: "9%" }}>
                   UpLine Dep
                 </th>
-                <th className="p-2" style={{ width: "9%" }}>
+                <th className="p-2 hidden md:table-cell" style={{ width: "9%" }}>
                   Penal W
                 </th>
-                <th className="p-2" style={{ width: "9%" }}>
+                <th className="p-2 hidden md:table-cell" style={{ width: "9%" }}>
                   Other W
                 </th>
-                <th className="p-2" style={{ width: "9%" }}>
+                <th className="p-2 hidden md:table-cell" style={{ width: "9%" }}>
                   UpLine W
                 </th>
                 <th className="p-2" style={{ width: "12%" }}>
@@ -364,8 +374,21 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
               <tbody>
               {openingRow}
               {rows.map((r) => (
+                <>
                 <tr key={r.id} className="border-t border-[#1f2937]">
-                  <td className="p-2">{r.date || '—'}</td>
+                  <td className="p-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="md:hidden text-sm px-2 py-1 rounded bg-transparent hover:bg-zinc-800"
+                        onClick={() => setExpandedTx(expandedTx === r.id ? null : r.id)}
+                        aria-expanded={expandedTx === r.id}
+                        title={expandedTx === r.id ? 'Hide details' : 'Show details'}
+                      >
+                        {expandedTx === r.id ? '▾' : '▸'}
+                      </button>
+                      <span>{r.date || '—'}</span>
+                    </div>
+                  </td>
                   <td
                     className="p-2"
                     onDoubleClick={() =>
@@ -487,7 +510,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                     )}
                   </td>
                   <td
-                    className="p-2 num-col"
+                    className="p-2 hidden md:table-cell num-col"
                     onDoubleClick={() =>
                       setEditingCell({
                         id: r.id,
@@ -527,7 +550,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                     )}
                   </td>
                   <td
-                    className="p-2 num-col"
+                    className="p-2 hidden md:table-cell num-col"
                     onDoubleClick={() =>
                       setEditingCell({
                         id: r.id,
@@ -567,7 +590,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                     )}
                   </td>
                   <td
-                    className="p-2 num-col"
+                    className="p-2 hidden md:table-cell num-col"
                     onDoubleClick={() =>
                       setEditingCell({
                         id: r.id,
@@ -607,7 +630,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                     )}
                   </td>
                   <td
-                    className="p-2 num-col"
+                    className="p-2 hidden md:table-cell num-col"
                     onDoubleClick={() =>
                       setEditingCell({
                         id: r.id,
@@ -687,6 +710,27 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                     </div>
                   </td>
                 </tr>
+                {expandedTx === r.id && (
+                  <tr className="md:hidden bg-[#070705]">
+                    <td colSpan={10} className="p-3 text-sm">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="text-neutral-400 text-xs">Other Deposit</div>
+                        <div className="text-right">{Number(r.otherDeposit || 0).toLocaleString()}</div>
+                        <div className="text-neutral-400 text-xs">UpLine Deposit</div>
+                        <div className="text-right">{Number(r.upLineDeposit || 0).toLocaleString()}</div>
+                        <div className="text-neutral-400 text-xs">Penalty</div>
+                        <div className="text-right">{Number(r.penalWithdrawal || 0).toLocaleString()}</div>
+                        <div className="text-neutral-400 text-xs">Other Withdrawal</div>
+                        <div className="text-right">{Number(r.otherWithdrawal || 0).toLocaleString()}</div>
+                        <div className="text-neutral-400 text-xs">UpLine Withdrawal</div>
+                        <div className="text-right">{Number(r.upLineWithdrawal || 0).toLocaleString()}</div>
+                        <div className="text-neutral-400 text-xs">Balance</div>
+                        <div className="text-right">{Number(r.balance || 0).toLocaleString()}</div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </>
               ))}
             </tbody>
           </table>

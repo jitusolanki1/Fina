@@ -3,9 +3,9 @@ import { ArrowLeft, GripVertical } from "lucide-react";
 import AccountSheet from "./account/AccountSheet";
 import { fetchJson } from "../fetchClient";
 
-function NumberCell({ v }) {
+function NumberCell({ v, className = "" }) {
   return (
-    <td className="p-3 text-right tabular-nums font-medium">
+    <td className={`p-3 text-right tabular-nums font-medium ${className}`}>
       {Number(v || 0).toLocaleString()}
     </td>
   );
@@ -19,6 +19,7 @@ function SummaryDetail({ summary, aggregate, onBack }) {
 
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [selectedRange, setSelectedRange] = useState(null);
+  const [expandedAccount, setExpandedAccount] = useState(null);
 
   async function openAccountHistory(accountId, accountName, openingBefore) {
     const range = summary?.date || null;
@@ -140,6 +141,7 @@ function SummaryDetail({ summary, aggregate, onBack }) {
           </thead>
           <tbody>
             {perAccount.map((a, idx) => (
+              <>
               <tr
                 key={a.accountId}
                 className={`${
@@ -147,9 +149,19 @@ function SummaryDetail({ summary, aggregate, onBack }) {
                 } hover:bg-[#111216]`}
               >
                 <td className="p-3">
-                  <span className="drag-handle">
-                    <GripVertical size={16} />
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="md:hidden text-sm px-2 py-1 rounded bg-transparent hover:bg-zinc-800"
+                      onClick={() => setExpandedAccount(expandedAccount === a.accountId ? null : a.accountId)}
+                      aria-expanded={expandedAccount === a.accountId}
+                      title={expandedAccount === a.accountId ? 'Hide details' : 'Show details'}
+                    >
+                      {expandedAccount === a.accountId ? '▾' : '▸'}
+                    </button>
+                    <span className="drag-handle">
+                      <GripVertical size={16} />
+                    </span>
+                  </div>
                 </td>
                 <td className="p-3">
                   <button
@@ -167,14 +179,41 @@ function SummaryDetail({ summary, aggregate, onBack }) {
                 </td>
                 <NumberCell v={a.openingBefore} />
                 <NumberCell v={a.deposit} />
-                <NumberCell v={a.otherDeposit} />
-                <NumberCell v={a.upLineDeposit} />
-                <NumberCell v={a.penalWithdrawal} />
-                <NumberCell v={a.otherWithdrawal} />
-                <NumberCell v={a.upLineWithdrawal} />
+                <NumberCell v={a.otherDeposit} className="hidden md:table-cell" />
+                <NumberCell v={a.upLineDeposit} className="hidden md:table-cell" />
+                <NumberCell v={a.penalWithdrawal} className="hidden md:table-cell" />
+                <NumberCell v={a.otherWithdrawal} className="hidden md:table-cell" />
+                <NumberCell v={a.upLineWithdrawal} className="hidden md:table-cell" />
                 <NumberCell v={a.net} />
                 <NumberCell v={a.openingAfter} />
               </tr>
+              {expandedAccount === a.accountId && (
+                <tr className="md:hidden bg-[#070705]">
+                  <td colSpan={11} className="p-3 text-sm">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="text-neutral-400 text-xs">Opening</div>
+                      <div className="text-right">{Number(a.openingBefore || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">Deposit</div>
+                      <div className="text-right">{Number(a.deposit || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">Other Deposit</div>
+                      <div className="text-right">{Number(a.otherDeposit || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">UpLine Deposit</div>
+                      <div className="text-right">{Number(a.upLineDeposit || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">Penal Withdrawal</div>
+                      <div className="text-right">{Number(a.penalWithdrawal || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">Other Withdrawal</div>
+                      <div className="text-right">{Number(a.otherWithdrawal || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">UpLine Withdrawal</div>
+                      <div className="text-right">{Number(a.upLineWithdrawal || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">Net</div>
+                      <div className="text-right">{Number(a.net || 0).toLocaleString()}</div>
+                      <div className="text-neutral-400 text-xs">Next Opening</div>
+                      <div className="text-right">{Number(a.openingAfter || 0).toLocaleString()}</div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              </>
             ))}
           </tbody>
         </table>

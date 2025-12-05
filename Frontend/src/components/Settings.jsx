@@ -207,8 +207,12 @@ const Settings = () => {
                   {
                     (() => {
                       const backendRoot = (import.meta.env.VITE_API_URL || (process.env.NODE_ENV === 'production' ? 'https://fina-nbnq.onrender.com/api' : 'http://localhost:4000/api')).replace(/\/api\/?$/i, '');
+                      // If user is logged in and we have a token, encode it into the linkState so
+                      // the backend can associate the OAuth callback with the logged-in user.
+                      const linkState = token ? `userToken:${encodeURIComponent(token)}` : undefined;
+                      const href = linkState ? `${backendRoot}/auth/github/connect?linkState=${encodeURIComponent(linkState)}` : `${backendRoot}/auth/github/connect`;
                       return (
-                        <a href={`${backendRoot}/auth/github/connect`} target="_blank" rel="noreferrer" className="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded">Connect with GitHub</a>
+                        <a href={href} target="_blank" rel="noreferrer" className="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded">Connect with GitHub</a>
                       );
                     })()
                   }

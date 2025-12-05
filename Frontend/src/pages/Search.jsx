@@ -153,11 +153,18 @@ function SearchPage() {
         }
       }
 
-      const enriched = txs.map((t) => ({
-        ...t,
-        accountName: (accMap[t.accountId] && accMap[t.accountId].name) || "-",
-        accountOpening: (accMap[t.accountId] && accMap[t.accountId].openingBalance) || 0,
-      }));
+      const enriched = txs.map((t) => {
+        // support backends that sometimes embed account object on the transaction
+        const nestedAccName = t.account && (t.account.name || t.account.accountName || t.account.title);
+        const nestedAccOpening = t.account && (t.account.openingBalance || t.account.opening || 0);
+        const byIdName = (t.accountId && accMap[t.accountId] && accMap[t.accountId].name) || null;
+        const byIdOpening = (t.accountId && accMap[t.accountId] && accMap[t.accountId].openingBalance) || 0;
+        return {
+          ...t,
+          accountName: nestedAccName || byIdName || "-",
+          accountOpening: nestedAccName ? (nestedAccOpening || 0) : byIdOpening,
+        };
+      });
 
       setResults(enriched);
 

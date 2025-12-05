@@ -21,7 +21,22 @@ export async function listTransactions(query = {}) {
         return tx;
       })
     );
-    return out;
+    // Normalize transaction shape for frontend convenience:
+    // - ensure `id` exists
+    // - ensure `accountId` is present (or pulled from nested `account`)
+    // - expose `accountName` when available
+    const norm = out.map((t) => {
+      const id = t.id || t._id || t.uuid || null;
+      const accountId = t.accountId || (t.account && (t.account.id || t.account._id || t.account.uuid)) || null;
+      const accountName = (t.account && (t.account.name || t.account.accountName)) || null;
+      return {
+        ...t,
+        id,
+        accountId,
+        accountName: t.accountName || accountName || undefined,
+      };
+    });
+    return norm;
   } catch (e) {
     return data;
   }

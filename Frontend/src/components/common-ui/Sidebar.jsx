@@ -17,7 +17,7 @@ import {
   Target,
   LogOut,
 } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
 import avatar from "../../assets/avatar.jpeg";
@@ -29,13 +29,104 @@ export default function Sidebar({
   onToggleCollapse,
 }) {
   const collapsedClass = collapsed ? "collapsed" : "";
+    const { isAuthenticated, user } = useAuth() || {};
 
   const mobileTranslate = open
     ? "translate-x-0 md:translate-x-0"
     : "-translate-x-full md:translate-x-0";
+  
+  const asideRef = useRef(null);
+  // Use a local ariaHidden flag so we can move focus off the sidebar
+  // before actually setting aria-hidden (avoids hiding a focused element).
+  const [ariaHidden, setAriaHidden] = useState(false);
+
+  useEffect(() => {
+    const asideEl = asideRef.current;
+    if (open) {
+      // opening: make visible to AT and remove inert
+      setAriaHidden(false);
+      if (asideEl) {
+        try {
+          asideEl.inert = false;
+          asideEl.removeAttribute("inert");
+        } catch (e) {}
+      }
+      return;
+    }
+
+    // closing: ensure no focused element is inside the aside before hiding
+    const active = typeof document !== "undefined" ? document.activeElement : null;
+    const containsFocus = asideEl && active && asideEl.contains(active);
+
+    const setHiddenNow = () => {
+      setAriaHidden(true);
+      if (asideEl) {
+        try {
+          asideEl.inert = true;
+          asideEl.setAttribute("inert", "");
+        } catch (e) {}
+      }
+    };
+
+    // Helper moves focus to a safe target then hides the aside.
+    const moveFocusThenHide = () => {
+      const fallback = (typeof document !== "undefined" && document.getElementById("root")) || (typeof document !== "undefined" && document.body);
+      if (!fallback) return setHiddenNow();
+
+      const prevTab = fallback.getAttribute && fallback.getAttribute("tabindex");
+      let addedTab = false;
+      try {
+        if (fallback.tabIndex === undefined || fallback.tabIndex < 0) {
+          fallback.setAttribute("tabindex", "-1");
+          addedTab = true;
+        }
+        // Request focus synchronously; browsers may update document.activeElement on the next frame
+        fallback.focus();
+      } catch (e) {}
+
+      // Check for up to a few frames whether focus moved off the aside; otherwise blur and proceed.
+      const checkAndHide = (attempt = 0) => {
+        const nowActive = document.activeElement;
+        const stillInside = asideEl && nowActive && asideEl.contains(nowActive);
+        if (!stillInside) {
+          try {
+            if (addedTab) fallback.removeAttribute("tabindex");
+            else if (prevTab != null) fallback.setAttribute("tabindex", prevTab);
+          } catch (e) {}
+          setHiddenNow();
+          return;
+        }
+
+        if (attempt < 5) {
+          // wait a few frames for focus to settle
+          requestAnimationFrame(() => checkAndHide(attempt + 1));
+          return;
+        }
+
+        // give up waiting: blur the active element then hide
+        try {
+          nowActive && typeof nowActive.blur === "function" && nowActive.blur();
+        } catch (e) {}
+        try {
+          if (addedTab) fallback.removeAttribute("tabindex");
+          else if (prevTab != null) fallback.setAttribute("tabindex", prevTab);
+        } catch (e) {}
+        setHiddenNow();
+      };
+
+      requestAnimationFrame(() => checkAndHide(0));
+    };
+
+    if (containsFocus) {
+      moveFocusThenHide();
+    } else {
+      setHiddenNow();
+    }
+  }, [open]);
   return (
     <aside
-      aria-hidden={!open}
+      ref={asideRef}
+      aria-hidden={ariaHidden}
       className={`fixed top-0 left-0 h-[calc(100vh)] transform ${mobileTranslate} ${collapsedClass} transition-all z-50 sidebar`}
     >
       <div className="p-4 sidebar-scroll h-full text-slate-200 flex flex-col">
@@ -232,24 +323,43 @@ export default function Sidebar({
         </div>
 
         <div className="mt-auto">
-          <div className="nav-item" style={{ justifyContent: "space-between" }}>
-            <div
-              style={{ display: "flex", alignItems: "center", gap: 10 }}
-              className="sidebar-label"
-            >
-              <img src={avatar} alt="user" className="avatar" />
-              <div className="sidebar-label">
-                <div className="user-name">Fina</div>
-                <div className="user-email">Fina@support.com</div>
+          {!isAuthenticated ? (
+            <div className="nav-item" style={{ justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <button
+                  className="page-btn"
+                  onClick={() => {
+                    onClose && onClose();
+                    window.location.href = "/login";
+                  }}
+                >
+                  Login
+                </button>
+                <button
+                  className="page-btn"
+                  onClick={() => {
+                    onClose && onClose();
+                    window.location.href = "/register";
+                  }}
+                >
+                  Register
+                </button>
               </div>
             </div>
-            <div
-              style={{ display: "flex", alignItems: "center", gap: 8 }}
-              className="nav-icon"
-            >
-              <SignOutButton onClose={onClose} />
+          ) : (
+            <div className="nav-item" style={{ justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="sidebar-label">
+                <img src={avatar} alt="user" className="avatar" />
+                <div className="sidebar-label">
+                  <div className="user-name">{user?.name || user?.email || 'User'}</div>
+                  <div className="user-email">{user?.email || ''}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }} className="nav-icon">
+                <SignOutButton onClose={onClose} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </aside>

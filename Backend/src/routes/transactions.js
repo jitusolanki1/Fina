@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import Transaction from "../models/Transaction.js";
+import Account from "../models/Account.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -46,11 +47,50 @@ router.post("/", requireAuth, async (req, res) => {
   const body = Object.assign({}, req.body);
   // ensure createdBy is set to the authenticated user
   body.createdBy = req.user && req.user.sub;
-  // basic validation: prefer transactions to have an accountId
+  // Try to infer an accountId when one is not provided.
   if (!body.accountId) {
-    // allow creation without accountId but warn in server logs
-    console.warn('Creating transaction without accountId by user', body.createdBy);
+    // accept nested `account` object with possible identifiers
+    const acctRef = body.account || body.accountRef || null;
+    if (acctRef) {
+      try {
+        // when acctRef is an id-like string
+        if (typeof acctRef === 'string') {
+          try {
+            const maybe = await Account.findById(acctRef);
+            if (maybe) body.accountId = String(maybe._id);
+          } catch (e) {
+            // not an ObjectId, try uuid or name match
+            const byUuid = await Account.findOne({ uuid: String(acctRef), createdBy: body.createdBy });
+            if (byUuid) body.accountId = String(byUuid._id);
+          }
+        } else if (typeof acctRef === 'object') {
+          if (acctRef._id || acctRef.id) {
+            try {
+              const maybe = await Account.findById(acctRef._id || acctRef.id);
+              if (maybe) body.accountId = String(maybe._id);
+            } catch (e) {}
+          }
+          if (!body.accountId && acctRef.uuid) {
+            const byUuid = await Account.findOne({ uuid: String(acctRef.uuid), createdBy: body.createdBy });
+            if (byUuid) body.accountId = String(byUuid._id);
+          }
+          if (!body.accountId && acctRef.name) {
+            const byName = await Account.findOne({ name: String(acctRef.name), createdBy: body.createdBy });
+            if (byName) body.accountId = String(byName._id);
+          }
+        }
+      } catch (err) {
+        console.error('Error while resolving account for transaction create', err && err.message);
+      }
+    }
   }
+
+  // basic validation: require transactions to have an accountId
+  if (!body.accountId) {
+    console.warn('Rejected transaction create without accountId by user', body.createdBy);
+    return res.status(400).json({ error: 'accountId is required' });
+  }
+
   const t = new Transaction(body);
   await t.save();
   res.json(t);

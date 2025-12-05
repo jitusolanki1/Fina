@@ -368,7 +368,8 @@ function Dashboard({ focusedAccount = null }) {
         {RC ? (
           <div className="card-dark p-4 rounded-lg">
             <h4 className="font-medium mb-2 text-slate-200">Balance</h4>
-            <RC.ResponsiveContainer width="100%" height={220}>
+            <div className="w-full h-56 md:h-72">
+              <RC.ResponsiveContainer width="100%" height="100%">
               <RC.AreaChart data={globalChartSeries}>
                 <RC.CartesianGrid strokeDasharray="3 3" />
                 <RC.XAxis dataKey="date" />
@@ -376,7 +377,8 @@ function Dashboard({ focusedAccount = null }) {
                 <RC.Tooltip />
                 <RC.Area type="monotone" dataKey="balance" stroke="#10b981" fill="#10b98133" />
               </RC.AreaChart>
-            </RC.ResponsiveContainer>
+              </RC.ResponsiveContainer>
+            </div>
           </div>
         ) : (
           <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
@@ -454,7 +456,7 @@ function Dashboard({ focusedAccount = null }) {
               <h4 className="font-medium mb-2 text-slate-200">
                 Balance Over Time
               </h4>
-              <div style={{ width: "100%", height: 260 }}>
+              <div className="w-full h-64 md:h-72">
                 {RC ? (
                   <RC.ResponsiveContainer>
                     <RC.LineChart data={analytics.balanceSeries}>
@@ -476,8 +478,8 @@ function Dashboard({ focusedAccount = null }) {
                         dot={false}
                       />
                     </RC.LineChart>
-                  </RC.ResponsiveContainer>
-                ) : (
+                    </RC.ResponsiveContainer>
+                  ) : (
                   <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
                 )}
               </div>
@@ -487,7 +489,7 @@ function Dashboard({ focusedAccount = null }) {
           <div className="grid md:grid-cols-3 gap-4">
             <div className="card-dark p-3 rounded shadow">
               <h4 className="font-medium mb-2">Deposit vs Withdrawal</h4>
-                <div style={{ width: "100%", height: 180 }}>
+                <div className="w-full h-44 md:h-48">
                 {RC ? (
                   <RC.ResponsiveContainer>
                     <RC.PieChart>
@@ -508,7 +510,7 @@ function Dashboard({ focusedAccount = null }) {
                       <RC.Tooltip />
                       <RC.Legend />
                     </RC.PieChart>
-                  </RC.ResponsiveContainer>
+                    </RC.ResponsiveContainer>
                 ) : (
                   <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
                 )}
@@ -519,7 +521,7 @@ function Dashboard({ focusedAccount = null }) {
               <h4 className="font-medium mb-2">
                 Monthly Deposits vs Withdrawals
               </h4>
-                <div style={{ width: "100%", height: 220 }}>
+                <div className="w-full h-56 md:h-60">
                 {RC ? (
                   <RC.ResponsiveContainer>
                     <RC.BarChart data={analytics.monthly}>
@@ -529,7 +531,7 @@ function Dashboard({ focusedAccount = null }) {
                       <RC.Bar dataKey="deposit" fill="#10b981" />
                       <RC.Bar dataKey="withdrawal" fill="#ef4444" />
                     </RC.BarChart>
-                  </RC.ResponsiveContainer>
+                    </RC.ResponsiveContainer>
                 ) : (
                   <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
                 )}
@@ -540,7 +542,7 @@ function Dashboard({ focusedAccount = null }) {
           <div className="grid md:grid-cols-2 gap-4">
             <div className="card-dark p-3 rounded shadow">
               <h4 className="font-medium mb-2">Weekly Trend</h4>
-                <div style={{ width: "100%", height: 180 }}>
+                <div className="w-full h-44 md:h-48">
                 {RC ? (
                   <RC.ResponsiveContainer>
                     <RC.AreaChart data={analytics.weekly}>
@@ -562,7 +564,7 @@ function Dashboard({ focusedAccount = null }) {
                         fill="#fecaca"
                       />
                     </RC.AreaChart>
-                  </RC.ResponsiveContainer>
+                    </RC.ResponsiveContainer>
                 ) : (
                   <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
                 )}
@@ -571,7 +573,7 @@ function Dashboard({ focusedAccount = null }) {
 
             <div className="card-dark p-3 rounded shadow">
               <h4 className="font-medium mb-2">Yearly Overview</h4>
-                <div style={{ width: "100%", height: 180 }}>
+                <div className="w-full h-44 md:h-48">
                 {RC ? (
                   <RC.ResponsiveContainer>
                     <RC.BarChart data={analytics.yearly}>
@@ -581,7 +583,7 @@ function Dashboard({ focusedAccount = null }) {
                       <RC.Bar dataKey="deposit" fill="#10b981" />
                       <RC.Bar dataKey="withdrawal" fill="#ef4444" />
                     </RC.BarChart>
-                  </RC.ResponsiveContainer>
+                    </RC.ResponsiveContainer>
                 ) : (
                   <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
                 )}
@@ -635,7 +637,7 @@ function Dashboard({ focusedAccount = null }) {
               {(!analytics.balanceSeries || analytics.balanceSeries.length === 0) && accounts && accounts.length > 0 && (
                 <div className="text-sm text-slate-400 mb-2">No transactions found — showing opening balances across accounts.</div>
               )}
-              <div style={{ width: "100%", height: 360 }} className="rounded-md overflow-hidden">
+              <div className="w-full h-80 md:h-[28rem] rounded-md overflow-hidden">
                 {RC ? (
                   <RC.ResponsiveContainer>
                     <RC.AreaChart data={globalChartSeries}>
@@ -656,7 +658,7 @@ function Dashboard({ focusedAccount = null }) {
                       <RC.Area type="monotone" dataKey="balance" stroke="#e5e7eb" strokeWidth={2} fill="url(#gradA)" dot={false} />
                       <RC.Area type="monotone" dataKey="balance" stroke="#9ca3af" strokeWidth={1} fill="url(#gradB)" dot={false} opacity={0.6} />
                     </RC.AreaChart>
-                  </RC.ResponsiveContainer>
+                    </RC.ResponsiveContainer>
                 ) : (
                   <div className="card-dark p-4 rounded-lg text-sm text-slate-400">Charts loading…</div>
                 )}
@@ -665,7 +667,7 @@ function Dashboard({ focusedAccount = null }) {
 
             <div className="card-dark p-4 rounded-lg">
               <h4 className="font-medium mb-2 text-slate-200">Deposits vs Withdrawals</h4>
-              <div style={{ width: "100%", height: 240 }}>
+              <div className="w-full h-60 md:h-64">
                 {accountRows && accountRows.length > 0 ? (
                   RC ? (
                     <RC.ResponsiveContainer>
