@@ -18,6 +18,7 @@ import decryptDate from "./middleware/decryptDate.js";
 import settingsRoute from "./routes/settings.js";
 import manualCommitRoute from "./routes/manualCommit.js";
 import authGithubRoutes from "./routes/authGithub.js";
+import usersRoutes from "./routes/users.js";
 
 import { startScheduler } from "./services/schedulerService.js";
 
@@ -115,6 +116,7 @@ app.use("/api/transactions", transactionsRoutes);
 app.use("/api/transactionsHistory", historyRoutes);
 app.use("/api/summaries", summariesRoutes);
 app.use("/api/uploads", uploadsRoutes);
+app.use("/api/users", usersRoutes);
 app.use("/api/settings", settingsRoute);
 app.use("/api/commit", manualCommitRoute);
 app.use("/auth/github", authGithubRoutes);

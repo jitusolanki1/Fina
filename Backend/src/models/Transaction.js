@@ -3,7 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 
 const TransactionSchema = new mongoose.Schema({
   accountId: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
-  date: { type: String },
+  date: { type: String, default: () => new Date().toISOString().slice(0,10) },
+  description: { type: String },
   createdBy: { type: String },
   uuid: { type: String, default: () => uuidv4(), index: true },
   deposit: { type: Number, default: 0 },
