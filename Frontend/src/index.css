@@ -466,6 +466,7 @@ body {
     color: #e6eef8;
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+    z-index: 70;
 }
 
 .collapse-handle:hover {

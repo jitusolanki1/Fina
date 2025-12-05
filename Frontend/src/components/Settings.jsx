@@ -23,6 +23,44 @@ const Settings = () => {
     setSettings({ ...settings, [key]: value });
   };
 
+  // On mount or when token changes, refresh server-side user info so
+  // GitHub connection state (which may have been updated via OAuth callback)
+  // is reflected in the settings UI.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const me = await fetchClient.fetchJson('/auth/me', { method: 'GET' });
+        if (mounted && me && me.user) {
+          setCurrentUser(me.user);
+          if (me.user.github && me.user.github.username) {
+            setGithubStatus({ ok: true, username: me.user.github.username, repo: me.user.github.repo });
+          }
+        }
+      } catch (e) {
+        // ignore — user may not be logged in
+      }
+
+      // detect OAuth redirect flag in URL (e.g. ?github_connected=1)
+      try {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('github_connected') === '1') {
+          try {
+            const me2 = await fetchClient.fetchJson('/auth/me', { method: 'GET' });
+            if (mounted && me2 && me2.user) {
+              setCurrentUser(me2.user);
+              if (me2.user.github && me2.user.github.username) {
+                setGithubStatus({ ok: true, username: me2.user.github.username, repo: me2.user.github.repo });
+                alert('GitHub connected successfully');
+              }
+            }
+          } catch (e) {}
+        }
+      } catch (e) {}
+    })();
+    return () => { mounted = false; };
+  }, [token]);
+
   async function saveSettings() {
     if (!user || !user.email) return alert('Please login first');
     try {
