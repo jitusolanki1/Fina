@@ -240,7 +240,7 @@ function Reports() {
             Create Report
           </button>
           {showCreateMenu && (
-            <div className="absolute z-40 mt-2 right-0 w-48 bg-[#070708] border border-gray-800 rounded shadow p-2">
+            <div className="absolute z-40 mt-1 left-0 w-48 bg-[#070708] border border-gray-800 rounded shadow p-2">
               <button
                 className="w-full text-left p-2 rounded hover:bg-[#0f1113]"
                 onClick={() => {

@@ -248,8 +248,8 @@ function AppRoutes({
       />
       {/* Only show tour on authenticated routes */}
       {!isAuthRoute && <TourLauncher appId="fina-app" startAutomatically={true} delayMs={800} />}
-      <main className="transition-all pt-20 pb-4 p-2 w-full">
-        <div className="mx-auto max-w-[1200px]">{routesElement}</div>
+      <main className="transition-all pt-20 pb-4 px-8 w-full">
+        <div className="mx-auto">{routesElement}</div>
       </main>
     </>
   );

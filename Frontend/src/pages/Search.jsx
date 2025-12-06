@@ -234,12 +234,6 @@ function SearchPage() {
 
   return (
     <div data-tour="search" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Search</h3>
-          <div className="text-sm text-slate-400">Find transactions by account name or description.</div>
-        </div>
-      </div>
 
       <div className="card-dark p-4 rounded">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
