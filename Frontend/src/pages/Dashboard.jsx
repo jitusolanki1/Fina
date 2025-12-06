@@ -310,7 +310,7 @@ function Dashboard({ focusedAccount = null }) {
   const COLORS = ["#10b981", "#ef4444"];
 
   return (
-    <div className="space-y-6">
+    <div data-tour="dashboard" className="space-y-4">
       {/* Top metric cards */}
       <div className="metric-grid">
         <div className="metric-card">

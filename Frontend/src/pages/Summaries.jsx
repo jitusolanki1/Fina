@@ -85,7 +85,7 @@ function Summaries() {
   }
 
   return (
-    <div className="space-y-4">
+    <div data-tour="summaries" className="space-y-4">
       {/* HEADER BAR */}
       <div className="table-card">
         <div className="table-header-bar">

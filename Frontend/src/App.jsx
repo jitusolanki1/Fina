@@ -8,6 +8,7 @@ import Header from "./components/common-ui/Header";
 import Sidebar from "./components/common-ui/Sidebar";
 import { useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import TourLauncher from "./components/TourLauncher";
 import "./index.css";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -245,22 +246,10 @@ function AppRoutes({
           setPaletteOpen(false);
         }}
       />
-      <Sidebar
-        open={sidebarOpen}
-        collapsed={sidebarCollapsed}
-        onClose={() => setSidebarOpen(false)}
-        onToggleCollapse={onToggleCollapse}
-      />
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/30 z-20 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      <main className="fixed sidebar-scroll h-full top-0 transition-all pt-20 left-0 right-0 p-10">
-        <div className={sidebarCollapsed ? "md:ml-16" : "md:ml-64"}>
-          <div className=" mx-auto p-4">{routesElement}</div>
-        </div>
+      {/* Only show tour on authenticated routes */}
+      {!isAuthRoute && <TourLauncher appId="fina-app" startAutomatically={true} delayMs={800} />}
+      <main className="transition-all pt-20 pb-4 p-2 w-full">
+        <div className="mx-auto max-w-[1200px]">{routesElement}</div>
       </main>
     </>
   );
@@ -288,6 +277,14 @@ export default function App() {
   // the QueryClient ref before any early returns that depend on auth state.
   const queryClientRef = React.useRef();
   if (!queryClientRef.current) queryClientRef.current = new QueryClient();
+  // Prevent body scrolling so only the app's main pane scrolls
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
 
   // If the auth provider hasn't finished its initial check, show a loader to avoid route flashes
   if (initialized === false) {
@@ -300,26 +297,11 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClientRef.current}>
       <BrowserRouter>
-        <div className="min-h-screen bg-[#0A0A0A] text-slate-200">
-          <Toaster />
-          <HeaderWrapper
-            onToggleSidebar={() => setSidebarOpen((s) => !s)}
-            onToggleCollapse={() => {
-              setSidebarCollapsed((s) => {
-                const next = !s;
-                try {
-                  localStorage.setItem("sidebarCollapsed", next ? "1" : "0");
-                } catch (e) {}
-                return next;
-              });
-            }}
-            sidebarOpen={sidebarOpen}
+        <div className="h-screen bg-[#0A0A0A] text-slate-200 flex flex-row overflow-hidden">
+          <Sidebar
+            open={sidebarOpen}
             collapsed={sidebarCollapsed}
-          />
-          <AppRoutes
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
-            sidebarCollapsed={sidebarCollapsed}
+            onClose={() => setSidebarOpen(false)}
             onToggleCollapse={() => {
               setSidebarCollapsed((s) => {
                 const next = !s;
@@ -330,6 +312,41 @@ export default function App() {
               });
             }}
           />
+          <div className="flex-1 min-h-screen flex flex-col">
+            <Toaster />
+            <HeaderWrapper
+              onToggleSidebar={() => setSidebarOpen((s) => !s)}
+              onToggleCollapse={() => {
+                setSidebarCollapsed((s) => {
+                  const next = !s;
+                  try {
+                    localStorage.setItem("sidebarCollapsed", next ? "1" : "0");
+                  } catch (e) {}
+                  return next;
+                });
+              }}
+              sidebarOpen={sidebarOpen}
+              collapsed={sidebarCollapsed}
+            />
+            <div
+              className={`flex-1 overflow-y-auto touch-scroll overscroll-contain h-main`}
+            >
+              <AppRoutes
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+                sidebarCollapsed={sidebarCollapsed}
+                onToggleCollapse={() => {
+                  setSidebarCollapsed((s) => {
+                    const next = !s;
+                    try {
+                      localStorage.setItem("sidebarCollapsed", next ? "1" : "0");
+                    } catch (e) {}
+                    return next;
+                  });
+                }}
+              />
+            </div>
+          </div>
         </div>
       </BrowserRouter>
     </QueryClientProvider>

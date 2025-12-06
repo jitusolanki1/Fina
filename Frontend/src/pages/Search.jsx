@@ -233,7 +233,7 @@ function SearchPage() {
   const suggestionList = useMemo(() => suggestions, [suggestions]);
 
   return (
-    <div className="space-y-4">
+    <div data-tour="search" className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Search</h3>

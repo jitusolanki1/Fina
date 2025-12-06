@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthProvider";
-import avatar from "../../assets/avatar.jpeg";
 import { fetchJson } from "../../fetchClient";
 
 export default function Sidebar({
@@ -47,12 +46,10 @@ export default function Sidebar({
     return (parts[0][0] + (parts[1][0] || "")).slice(0, 2).toUpperCase();
   }
 
-  // Close helper used after navigation (keeps behaviour similar to original)
   function handleNavClose() {
     if (typeof onClose === "function") onClose();
   }
 
-  // safe navigate with router fallback
   function safeNavigate(to) {
     try {
       handleNavClose();
@@ -62,12 +59,11 @@ export default function Sidebar({
     }
   }
 
-  // keep body scroll lock tidy when sidebar on mobile (optional)
   useEffect(() => {
     if (typeof document === "undefined") return;
     const body = document.body;
     if (open) {
-      body.style.overflow = ""; // allow scrolling when sidebar open (sidebar overlays)
+      body.style.overflow = "";
     } else {
       body.style.overflow = "";
     }
@@ -99,7 +95,8 @@ export default function Sidebar({
   return (
     <aside
       ref={asideRef}
-      className={`fixed top-0 left-0 h-[100vh] transform ${mobileTranslate} ${collapsedClass} transition-all z-50 sidebar`}
+      data-tour="sidebar"
+      className={`fixed left-0 transform ${mobileTranslate} ${collapsedClass} transition-all z-50 sidebar top-header h-main !-top-0 `}
       aria-hidden={!open}
     >
       <div className="p-4 sidebar-scroll h-full text-slate-200 flex flex-col ">
@@ -111,37 +108,17 @@ export default function Sidebar({
           >
             {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
-
-          <div className="flex flex-col gap-3 w-full">
-            <div className="flex items-center gap-3 w-full">
-              <div className="logo-circle">
-                <span style={{ color: "#e6eef8", fontWeight: 700 }}>
-                  <Target size={26} />
-                </span>
-              </div>
-              <div className="text-base font-semibold">
-                <span className="sidebar-label">Fina</span>
-              </div>
+        </div>
+        <div className=" w-full mb-4">
+          <NavLink to="/account-create" onClick={handleNavClose}>
+            <div className="quick-create inline-flex items-center gap-2 px-2 py-1 rounded-md">
+              <Plus size={14} />
+              <span className="sidebar-label">Quick Create</span>
             </div>
-
-            <div className="flex items-center gap-2">
-              <NavLink to="/account-create" onClick={handleNavClose}>
-                <div className="quick-create inline-flex items-center gap-2 px-2 py-1 rounded-md">
-                  <Plus size={14} />
-                  <span className="sidebar-label">Quick Create</span>
-                </div>
-              </NavLink>
-
-              <NavLink to="/messages" onClick={handleNavClose}>
-                <div className="mail-btn p-2 rounded-md " title="Messages">
-                  <Mail size={16} />
-                </div>
-              </NavLink>
-            </div>
-          </div>
+          </NavLink>
         </div>
 
-        <div className="mt-4">
+        <div>
           <nav className="flex flex-col gap-1">
             <NavLink
               to="/"
@@ -176,6 +153,18 @@ export default function Sidebar({
             >
               <BarChart2 className="nav-icon" />
               <span className="sidebar-label">Ciw Summary</span>
+            </NavLink>
+
+            <NavLink
+              to="/messages"
+              title="Messages"
+              className={({ isActive }) =>
+                isActive ? "nav-item active" : "nav-item"
+              }
+              onClick={handleNavClose}
+            >
+              <Mail className="nav-icon" />
+              <span className="sidebar-label">Messages</span>
             </NavLink>
 
             <NavLink
@@ -323,7 +312,10 @@ export default function Sidebar({
                 >
                   {me?.github && (me.github.avatarUrl || me.github.username) ? (
                     <img
-                      src={me.github.avatarUrl || `https://github.com/${me.github.username}.png?size=80`}
+                      src={
+                        me.github.avatarUrl ||
+                        `https://github.com/${me.github.username}.png?size=80`
+                      }
                       alt="user"
                       className="avatar"
                     />

@@ -1,14 +1,5 @@
 import React, { useState } from "react";
-import {
-  Menu,
-  X,
-  Sun,
-  Moon,
-  ChevronLeft,
-  ChevronRight,
-  Bell,
-  Search,
-} from "lucide-react";
+import { Menu, X, Bell, Search, HelpCircle, Target } from "lucide-react";
 import NotificationDrawer from "./NotificationDrawer";
 import { Link } from "react-router-dom";
 
@@ -32,7 +23,7 @@ export default function Header({
     >
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-14 items-center">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pl-4 md:pl-12 ">
             <button
               onClick={onToggleSidebar}
               aria-label="Toggle navigation"
@@ -40,7 +31,10 @@ export default function Header({
             >
               {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
-            <div className="text-lg font-semibold">Fina</div>
+
+            <div className="text-base font-semibold">
+              <span className="sidebar-label">Fina</span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <Link
@@ -50,6 +44,23 @@ export default function Header({
             >
               <Search size={16} />
             </Link>
+            <button
+              onClick={() => {
+                // Support lazy-loaded tour (TourLauncher)
+                if (window.__launchTour) {
+                  window.__launchTour();
+                }
+                // Fallback to direct tour (if loaded)
+                if (window.__crmGuide) {
+                  window.__crmGuide.restart();
+                }
+              }}
+              className="p-2 rounded hover:bg-slate-800/40"
+              title="Show Tour"
+              aria-label="Show guided tour"
+            >
+              <HelpCircle size={16} />
+            </button>
             <div className="hidden sm:block text-sm text-slate-300">
               <button
                 onClick={() => setNotifOpen(true)}

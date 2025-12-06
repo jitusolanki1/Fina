@@ -1,0 +1,363 @@
+/* Enhanced Component Styles for Fina App */
+
+/* ==========================================
+   ENHANCED CARD COMPONENTS
+   ========================================== */
+
+/* Premium Card with Gradient Background */
+.premium-card {
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.8) 0%, rgba(15, 15, 15, 0.9) 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-green), var(--accent-blue), var(--accent-purple));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.premium-card:hover {
+    transform: translateY(-4px);
+    border-color: #374151;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.5);
+}
+
+.premium-card:hover::before {
+    opacity: 1;
+}
+
+/* Stat Card with Icon */
+.stat-card {
+    background: linear-gradient(135deg, #0f0f10 0%, #0a0a0b 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-green);
+    box-shadow: 0 8px 16px rgba(16, 185, 129, 0.1);
+}
+
+.stat-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(59, 130, 246, 0.1));
+    margin-bottom: 12px;
+}
+
+.stat-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.stat-card-label {
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* ==========================================
+   ENHANCED BUTTONS
+   ========================================== */
+
+/* Primary Action Button */
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent-green), #059669);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Secondary Button */
+.btn-secondary {
+    background: linear-gradient(135deg, #1f2937, #111827);
+    color: var(--text-secondary);
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: linear-gradient(135deg, #374151, #1f2937);
+    border-color: #4b5563;
+    transform: translateY(-1px);
+}
+
+/* Ghost Button */
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--border);
+}
+
+/* ==========================================
+   ENHANCED BADGES & TAGS
+   ========================================== */
+
+/* Status Badge */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #10b981;
+}
+
+.badge-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+}
+
+.badge-error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+
+.badge-info {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+}
+
+/* ==========================================
+   ENHANCED INPUTS
+   ========================================== */
+
+/* Premium Input Field */
+.input-premium {
+    background: linear-gradient(135deg, #0f0f10 0%, #0a0a0b 100%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.input-premium:focus {
+    outline: none;
+    border-color: var(--accent-green);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    background: #0f0f10;
+}
+
+.input-premium::placeholder {
+    color: var(--text-muted);
+}
+
+/* ==========================================
+   ENHANCED LIST ITEMS
+   ========================================== */
+
+/* Premium List Item */
+.list-item-premium {
+    background: linear-gradient(135deg, #0f0f10 0%, #0a0a0b 100%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.list-item-premium:hover {
+    background: linear-gradient(135deg, #1a1a1b 0%, #121213 100%);
+    border-color: #374151;
+    transform: translateX(4px);
+}
+
+.list-item-premium:active {
+    transform: translateX(2px);
+}
+
+/* ==========================================
+   ENHANCED MODALS
+   ========================================== */
+
+/* Premium Modal Overlay */
+.modal-overlay {
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+}
+
+/* Premium Modal Content */
+.modal-content {
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.95) 0%, rgba(15, 15, 15, 0.95) 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(20px);
+}
+
+/* ==========================================
+   ANIMATION UTILITIES
+   ========================================== */
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-slide-in {
+    animation: slideInUp 0.3s ease-out;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* ==========================================
+   HOVER EFFECTS
+   ========================================== */
+
+.hover-lift {
+    transition: transform 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+}
+
+.hover-glow {
+    transition: box-shadow 0.3s ease;
+}
+
+.hover-glow:hover {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+/* ==========================================
+   GRADIENT BACKGROUNDS
+   ========================================== */
+
+.gradient-green-blue {
+    background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+}
+
+.gradient-purple-blue {
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+}
+
+.gradient-dark {
+    background: linear-gradient(135deg, #1a1a1b 0%, #0f0f10 100%);
+}
+
+/* ==========================================
+   USAGE EXAMPLES
+   ========================================== */
+
+/*
+Example 1: Premium Card with Icon
+<div class="premium-card">
+    <div class="stat-card-icon">💰</div>
+    <div class="stat-card-value">$12,345</div>
+    <div class="stat-card-label">Total Balance</div>
+</div>
+
+Example 2: Action Buttons
+<button class="btn-primary">Save Changes</button>
+<button class="btn-secondary">Cancel</button>
+<button class="btn-ghost">Learn More</button>
+
+Example 3: Status Badges
+<span class="badge badge-success">Active</span>
+<span class="badge badge-warning">Pending</span>
+<span class="badge badge-error">Error</span>
+
+Example 4: Premium Input
+<input type="text" class="input-premium" placeholder="Enter amount..." />
+
+Example 5: List Items
+<div class="list-item-premium animate-slide-in hover-lift">
+    <h4>Transaction Title</h4>
+    <p>Details here...</p>
+</div>
+*/

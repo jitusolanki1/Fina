@@ -98,7 +98,7 @@ export default function AccountsPage() {
   ];
 
   return (
-    <div className="space-y-6 settings-card">
+    <div data-tour="accounts" className="space-y-6 settings-card">
       {/* Template gallery */}
       <div className="p-6 rounded ">
         <div className="flex items-center justify-between mb-4">

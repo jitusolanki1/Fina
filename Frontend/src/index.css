@@ -11,8 +11,16 @@
 :root {
     --app-bg: #0A0A0A;
     --card-bg: #0F0F0F;
+    --card-hover: #141414;
+    --header-height: 56px;
     --muted: #94a3b8;
     --border: #1f2937;
+    --accent-green: #10b981;
+    --accent-blue: #3b82f6;
+    --accent-purple: #8b5cf6;
+    --text-primary: #e6eef8;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
 }
 
 
@@ -36,14 +44,21 @@ body {
 .card-dark {
     background: var(--card-bg);
     border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.card-dark:hover {
+    background: var(--card-hover);
+    border-color: #2d3748;
 }
 
 /* Table card that matches the screenshot: rounded, padded, full-width container */
 .table-card {
-    background: var(--app-bg);
+    background: var(--card-bg);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 14px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
 }
 
 .table-header-bar {
@@ -61,12 +76,19 @@ body {
 }
 
 .chip {
-    padding: 6px 10px;
-    background: #121212;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #121212 0%, #0f0f0f 100%);
     border-radius: 8px;
     color: #cbd5e1;
     font-size: 13px;
-    border: 1px solid #151515;
+    border: 1px solid #1f2937;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.chip:hover {
+    background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+    border-color: #374151;
 }
 
 .controls {
@@ -81,13 +103,25 @@ body {
 }
 
 .control-btn {
-    padding: 6px 10px;
-    background: #0f0f10;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #0f0f10 0%, #0a0a0b 100%);
     border: 1px solid var(--border);
     color: #e6eef8;
     border-radius: 8px;
     white-space: nowrap;
     font-size: 13px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.control-btn:hover {
+    background: linear-gradient(135deg, #1a1a1b 0%, #121213 100%);
+    border-color: #374151;
+    transform: translateY(-1px);
+}
+
+.control-btn:active {
+    transform: translateY(0);
 }
 
 .table-wrap {
@@ -188,11 +222,36 @@ body {
 }
 
 .metric-card {
-    background: linear-gradient(180deg, rgba(20, 20, 20, 0.6), rgba(15, 15, 15, 0.6));
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.8) 0%, rgba(15, 15, 15, 0.9) 100%);
     border: 1px solid var(--border);
-    padding: 18px;
+    padding: 20px;
     border-radius: 12px;
     position: relative;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    border-color: #374151;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+    border-radius: 12px 12px 0 0;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.metric-card:hover::before {
+    opacity: 1;
 }
 
 .metric-card h3 {
@@ -402,6 +461,20 @@ body {
 .sidebar-scroll::-webkit-scrollbar {
     display: none;
     /* Chrome, Safari */
+}
+
+/* Main scroll area: use smooth/touch scrolling and prevent body scroll */
+.app-main-scroll {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        height: calc(100vh - var(--header-height));
+        overscroll-behavior: contain;
+}
+
+@layer utilities {
+    .top-header { top: var(--header-height); }
+    .h-main { height: calc(100vh); }
+    .touch-scroll { -webkit-overflow-scrolling: touch; }
 }
 
 /* Collapsed / mini sidebar (desktop) */

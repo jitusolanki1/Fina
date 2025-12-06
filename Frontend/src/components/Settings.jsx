@@ -171,7 +171,7 @@ const Settings = () => {
   }
 
   return (
-    <div className="max-w-full mx-auto space-y-4">
+    <div className="max-w-full mx-auto space-y-4 overflow-y-auto">
       <div className="rounded-md shadow-sm border settings-card">
         <div className="space-y-6">
           {/* Notifications */}

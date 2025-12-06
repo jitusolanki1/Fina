@@ -228,7 +228,7 @@ function Reports() {
   }
 
   return (
-    <div className="space-y-4">
+    <div data-tour="reports" className="space-y-4">
       <h3 className="text-lg font-semibold">Reports</h3>
 
       <div className="flex items-center gap-3">
