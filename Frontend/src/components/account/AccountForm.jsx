@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createAccount } from '../../services/accountsService';
+import { createTransaction } from '../../services/transactionService';
 import toast from 'react-hot-toast';
 
 export default function AccountForm({ onCreated, onOpenDetail }) {
@@ -10,14 +11,32 @@ export default function AccountForm({ onCreated, onOpenDetail }) {
     e.preventDefault();
     if (!name) return toast.error('Name required');
     try {
-      const account = await createAccount({ name, openingBalance: Number(opening) });
-      // NOTE: don't create a duplicate opening transaction here. The app
-      // uses the account's `openingBalance` as the canonical opening amount.
-      // Creating both `openingBalance` and an 'Opening Balance' transaction
-      // caused the balance to be counted twice.
+      // Create account with only the `name`. If an opening value was provided
+      // create an immutable opening transaction afterwards.
+      const account = await createAccount({ name });
       toast.success('Account created');
       setName('');
       setOpening('0');
+      // If opening balance provided, create an opening transaction
+      const ob = Number(opening || 0);
+      if (ob && account && (account.id || account._id)) {
+        try {
+          const txPayload = {
+            accountId: account.id || account._id,
+            date: new Date().toISOString().slice(0,10),
+            description: 'Opening balance',
+            createdBy: undefined,
+            immutable: true,
+          };
+          if (ob >= 0) txPayload.deposit = ob;
+          else txPayload.otherWithdrawal = Math.abs(ob);
+          await createTransaction(txPayload);
+        } catch (err) {
+          console.error('Could not create opening transaction', err);
+          toast.error('Account created but opening transaction failed');
+        }
+      }
+
       onCreated && onCreated(account);
     } catch (err) {
       console.error(err);

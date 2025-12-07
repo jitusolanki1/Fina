@@ -10,6 +10,7 @@ import LoadingButton from '../common-ui/LoadingButton';
 export default function AccountSheet({ account, onClose, historyRange = null }) {
   const [rows, setRows] = useState([]);
   const [rawTxs, setRawTxs] = useState([]);
+  const [openingBalance, setOpeningBalance] = useState(Number(account?.openingBalance || 0));
 
   const fmt = (v) => Number(v || 0).toLocaleString();
   const [form, setForm] = useState({ description: '', deposit: '', penalDeposit: '', otherDeposit: '', upLineDeposit: '', penalWithdrawal: '', otherWithdrawal: '', upLineWithdrawal: '' });
@@ -37,11 +38,18 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
   useEffect(() => {
     const txs = txData || [];
     setRawTxs(txs);
-    setRows(runningBalances(account.openingBalance, txs));
+    // detect existing opening transaction (created server-side)
+    const openingTx = txs.find((t) => String(t.description || "").toLowerCase().includes("opening"));
+    const openingFromTx = openingTx
+      ? (Number(openingTx.deposit || 0) + Number(openingTx.otherDeposit || 0) + Number(openingTx.upLineDeposit || 0) - (Number(openingTx.penalWithdrawal || 0) + Number(openingTx.otherWithdrawal || 0) + Number(openingTx.upLineWithdrawal || 0)))
+      : Number(account.openingBalance || 0);
+    // if openingTx exists keep it in txs and start running balances at 0 so openingTx contributes to balance
+    setRows(runningBalances(openingTx ? 0 : openingFromTx, txs));
+    setOpeningBalance(openingFromTx);
 
     // compute breakdown (derived from transactions)
     try {
-      const opening = Number(account.openingBalance || 0);
+      const opening = openingFromTx;
       const extractKey = (desc) => {
         if (!desc) return 'Unknown';
         const d = String(desc).trim();
@@ -60,8 +68,6 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
         if (!byKey[key]) byKey[key] = { key, cr: 0, dr: 0 };
         byKey[key].cr += cr;
         byKey[key].dr += dr;
-        totalCr += cr;
-        totalDr += dr;
       }
       const rowsB = Object.values(byKey).sort((a, b) => b.cr - a.cr);
       const closing = opening + totalCr - totalDr;
@@ -71,41 +77,17 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
     }
   }, [txData, account]);
 
-  // Load latest summary for this account only when account changes (avoid refetching on every txData update)
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      if (!account || !account.id) return;
-      try {
-        const summaries = await listSummaries({ _sort: 'date', _order: 'desc' });
-        if (!mounted) return;
-        for (const s of summaries) {
-          const accSummary = s.perAccount.find((p) => String(p.accountId) === String(account.id));
-          if (accSummary) { setLatest(accSummary); break; }
-        }
-      } catch (err) {
-        console.error('Could not load latest summary', err);
-      }
-    })();
-    return () => { mounted = false; };
-  }, [account && account.id]);
-
-  const createMutation = useMutation({
-    mutationFn: (payload) => createTransaction(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }),
-    onError: () => toast.error('Could not add transaction'),
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, patch }) => updateTransaction(id, patch),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }),
-    onError: () => toast.error('Could not update transaction'),
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (id) => deleteTransaction(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: txQueryKey }),
     onError: () => toast.error('Could not delete transaction'),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: createTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries(txQueryKey);
+    },
   });
 
   const hasOpeningTx = (rawTxs || []).some((t) => String(t.description || '').toLowerCase().includes('opening'));
@@ -117,7 +99,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
       <tr key="__opening" className="border-t border-[#1f2937]">
         <td className="p-2">{dateStr}</td>
         <td className="p-2">Opening Balance</td>
-        <td className="p-2 text-center">{ob}</td>
+        <td className="p-2 text-center">&nbsp;</td>
         <td className="p-2 hidden md:table-cell text-center">0</td>
         <td className="p-2 hidden md:table-cell text-center">0</td>
         <td className="p-2 hidden md:table-cell text-center">0</td>
@@ -151,7 +133,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
 
   return (
     <div className="">
-      <div className="card-dark p-4 rounded" style={{ maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
+      <div className="card-dark p-4 rounded">
         <div className="flex justify-between items-center mb-3">
           <div>
             <h3 className="text-lg font-semibold text-slate-100">
@@ -164,13 +146,13 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
               </div>
             ) : (
               <div className="text-xs text-slate-400">
-                Opening: {fmt(account.openingBalance)}
+                Opening: {fmt(openingBalance)}
               </div>
             )}
           </div>
           <div className="flex gap-2">
             <div className="text-sm text-slate-200">
-              Current Opening: {fmt(account.openingBalance)}
+              Current Opening: {fmt(openingBalance)}
             </div>
             <button
               onClick={() => {
@@ -404,13 +386,10 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                   </td>
                   <td
                     className="p-2"
-                    onDoubleClick={() =>
-                      setEditingCell({
-                        id: r.id,
-                        field: "description",
-                        value: r.description,
-                      })
-                    }
+                    onDoubleClick={() => {
+                      if (r.immutable) return;
+                      setEditingCell({ id: r.id, field: "description", value: r.description });
+                    }}
                   >
                     {editingCell &&
                     editingCell.id === r.id &&
@@ -442,55 +421,54 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                       r.description
                     )}
                   </td>
+                  {(() => {
+                    const isOpeningRow = r.immutable && String(r.description || '').toLowerCase().includes('opening');
+                    return (
+                      <td
+                        className="p-2 num-col"
+                        onDoubleClick={() => {
+                          if (r.immutable) return;
+                          setEditingCell({ id: r.id, field: "deposit", value: r.deposit });
+                        }}
+                      >
+                        {editingCell &&
+                        editingCell.id === r.id &&
+                        editingCell.field === "deposit" ? (
+                          <input
+                            type="number"
+                            value={editingCell.value}
+                            onChange={(e) =>
+                              setEditingCell((s) => ({
+                                ...s,
+                                value: e.target.value,
+                              }))
+                            }
+                            onBlur={async (e) => {
+                              try {
+                                await updateMutation.mutateAsync({ id: r.id, patch: { deposit: Number(editingCell.value) } });
+                                setEditingCell(null);
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") e.target.blur();
+                            }}
+                            autoFocus
+                            className="bg-[#0A0A0A] border border-[#1f2937] p-1 w-24 text-slate-200 rounded text-center"
+                          />
+                        ) : (
+                          isOpeningRow ? '' : fmt(r.deposit)
+                        )}
+                      </td>
+                    );
+                  })()}
                   <td
                     className="p-2 num-col"
-                    onDoubleClick={() =>
-                      setEditingCell({
-                        id: r.id,
-                        field: "deposit",
-                        value: r.deposit,
-                      })
-                    }
-                  >
-                    {editingCell &&
-                    editingCell.id === r.id &&
-                    editingCell.field === "deposit" ? (
-                      <input
-                        type="number"
-                        value={editingCell.value}
-                        onChange={(e) =>
-                          setEditingCell((s) => ({
-                            ...s,
-                            value: e.target.value,
-                          }))
-                        }
-                        onBlur={async (e) => {
-                          try {
-                            await updateMutation.mutateAsync({ id: r.id, patch: { deposit: Number(editingCell.value) } });
-                            setEditingCell(null);
-                          } catch (err) {
-                            console.error(err);
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.target.blur();
-                        }}
-                        autoFocus
-                        className="bg-[#0A0A0A] border border-[#1f2937] p-1 w-24 text-slate-200 rounded text-center"
-                      />
-                    ) : (
-                      fmt(r.deposit)
-                    )}
-                  </td>
-                  <td
-                    className="p-2 num-col"
-                    onDoubleClick={() =>
-                      setEditingCell({
-                        id: r.id,
-                        field: "otherDeposit",
-                        value: r.otherDeposit,
-                      })
-                    }
+                    onDoubleClick={() => {
+                      if (r.immutable) return;
+                      setEditingCell({ id: r.id, field: "otherDeposit", value: r.otherDeposit });
+                    }}
                   >
                     {editingCell &&
                     editingCell.id === r.id &&
@@ -524,13 +502,10 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                   </td>
                   <td
                     className="p-2 hidden md:table-cell num-col"
-                    onDoubleClick={() =>
-                      setEditingCell({
-                        id: r.id,
-                        field: "penalDeposit",
-                        value: r.penalDeposit,
-                      })
-                    }
+                    onDoubleClick={() => {
+                      if (r.immutable) return;
+                      setEditingCell({ id: r.id, field: "penalDeposit", value: r.penalDeposit });
+                    }}
                   >
                     {editingCell &&
                     editingCell.id === r.id &&
@@ -564,13 +539,10 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                   </td>
                   <td
                     className="p-2 hidden md:table-cell num-col"
-                    onDoubleClick={() =>
-                      setEditingCell({
-                        id: r.id,
-                        field: "upLineDeposit",
-                        value: r.upLineDeposit,
-                      })
-                    }
+                    onDoubleClick={() => {
+                      if (r.immutable) return;
+                      setEditingCell({ id: r.id, field: "upLineDeposit", value: r.upLineDeposit });
+                    }}
                   >
                     {editingCell &&
                     editingCell.id === r.id &&
@@ -604,13 +576,10 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                   </td>
                   <td
                     className="p-2 hidden md:table-cell num-col"
-                    onDoubleClick={() =>
-                      setEditingCell({
-                        id: r.id,
-                        field: "penalWithdrawal",
-                        value: r.penalWithdrawal,
-                      })
-                    }
+                    onDoubleClick={() => {
+                      if (r.immutable) return;
+                      setEditingCell({ id: r.id, field: "penalWithdrawal", value: r.penalWithdrawal });
+                    }}
                   >
                     {editingCell &&
                     editingCell.id === r.id &&
@@ -644,13 +613,10 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                   </td>
                   <td
                     className="p-2 hidden md:table-cell num-col"
-                    onDoubleClick={() =>
-                      setEditingCell({
-                        id: r.id,
-                        field: "otherWithdrawal",
-                        value: r.otherWithdrawal,
-                      })
-                    }
+                    onDoubleClick={() => {
+                      if (r.immutable) return;
+                      setEditingCell({ id: r.id, field: "otherWithdrawal", value: r.otherWithdrawal });
+                    }}
                   >
                     {editingCell &&
                     editingCell.id === r.id &&
@@ -684,13 +650,10 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                   </td>
                   <td
                     className="p-2 hidden md:table-cell num-col"
-                    onDoubleClick={() =>
-                      setEditingCell({
-                        id: r.id,
-                        field: "upLineWithdrawal",
-                        value: r.upLineWithdrawal,
-                      })
-                    }
+                    onDoubleClick={() => {
+                      if (r.immutable) return;
+                      setEditingCell({ id: r.id, field: "upLineWithdrawal", value: r.upLineWithdrawal });
+                    }}
                   >
                     {editingCell &&
                     editingCell.id === r.id &&
@@ -725,16 +688,10 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                   <td className="p-2 balance-cell num-col">{fmt(r.balance)}</td>
                   <td className="p-2">
                     <div className="flex items-center justify-center gap-2">
-                      {!historyRange && (
+                      {!historyRange && !r.immutable && (
                         <>
                           <button
-                            onClick={() =>
-                              setEditingCell({
-                                id: r.id,
-                                field: "description",
-                                value: r.description,
-                              })
-                            }
+                            onClick={() => setEditingCell({ id: r.id, field: "description", value: r.description })}
                             className="px-2 py-1 bg-transparent hover:bg-[#111214] rounded"
                             title="Edit description"
                           >
@@ -756,6 +713,9 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
                             <Trash2 size={14} className="text-red-400" />
                           </button>
                         </>
+                      )}
+                      {!historyRange && r.immutable && (
+                        <div className="text-xs text-slate-400">Opening</div>
                       )}
                       {historyRange && (
                         <div className="archived-label">archived</div>

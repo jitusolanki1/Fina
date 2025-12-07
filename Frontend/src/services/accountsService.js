@@ -14,7 +14,9 @@ export async function getAccount(id) {
 }
 
 export async function createAccount(payload) {
-  const it = await fetchJson('/accounts', { method: 'POST', body: JSON.stringify(payload) });
+  // Only send the name when creating an account; opening balance is handled as a transaction.
+  const body = { name: payload.name };
+  const it = await fetchJson('/accounts', { method: 'POST', body: JSON.stringify(body) });
   return it ? { ...it, id: it.id || it._id || it.uuid } : it;
 }
 

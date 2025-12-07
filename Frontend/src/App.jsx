@@ -10,6 +10,7 @@ import { useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import TourLauncher from "./components/TourLauncher";
 import "./index.css";
+import PerplexityChat from "./components/PerplexityChat";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AccountsPage = lazy(() => import("./pages/Accounts"));
@@ -19,6 +20,12 @@ const AccountSheet = lazy(() => import("./components/account/AccountSheet"));
 const AccountForm = lazy(() => import("./components/account/AccountForm"));
 const AccountDetail = lazy(() => import("./components/account/AccountDetail"));
 const Accountblank = lazy(() => import("./components/account/Accountblank"));
+const BlankAccountPage = lazy(() => import("./pages/BlankAccount"));
+const TodoListPage = lazy(() => import("./pages/TodoList"));
+const AnnualBudgetPage = lazy(() => import("./pages/AnnualBudget"));
+const MonthlyBudgetPage = lazy(() => import("./pages/MonthlyBudget"));
+const GoogleFinancePage = lazy(() => import("./pages/GoogleFinance"));
+const AnnualCalendarPage = lazy(() => import("./pages/AnnualCalendar"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const SummariesPage = lazy(() => import("./pages/Summaries"));
 const LoginPage = lazy(() => import("./components/auth/Login"));
@@ -117,6 +124,54 @@ function AppRoutes({
           element={
             <ProtectedRoute>
               <Accountblank />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/blank-account"
+          element={
+            <ProtectedRoute>
+              <BlankAccountPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/todo/new"
+          element={
+            <ProtectedRoute>
+              <TodoListPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/budget-annual/new"
+          element={
+            <ProtectedRoute>
+              <AnnualBudgetPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/budget-monthly/new"
+          element={
+            <ProtectedRoute>
+              <MonthlyBudgetPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/google-finance/new"
+          element={
+            <ProtectedRoute>
+              <GoogleFinancePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account/calendar-annual/new"
+          element={
+            <ProtectedRoute>
+              <AnnualCalendarPage />
             </ProtectedRoute>
           }
         />
@@ -257,7 +312,7 @@ function AppRoutes({
       />
       {/* Only show tour on authenticated routes */}
       {!isAuthRoute && <TourLauncher appId="fina-app" startAutomatically={true} delayMs={800} />}
-      <main className="transition-all pt-20 pb-4 px-8 w-full">
+      <main className="transition-all px-2 pt-20 pb-4 md:px-8 w-full">
         <div className="mx-auto">{routesElement}</div>
       </main>
     </>
@@ -355,6 +410,7 @@ export default function App() {
                 }}
               />
             </div>
+            <PerplexityChat />
           </div>
         </div>
       </BrowserRouter>

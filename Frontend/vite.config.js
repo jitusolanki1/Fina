@@ -30,4 +30,16 @@ export default defineConfig({
       },
     },
   },
+  // Dev server proxy: forward /api requests to backend server during local development.
+  // Set BACKEND_URL env var (e.g. http://localhost:3001) to override the default.
+  server: {
+    proxy: {
+      "/api": {
+        target: process.env.BACKEND_URL || "http://localhost:4000",
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api/, "/api"),
+      },
+    },
+  },
 });

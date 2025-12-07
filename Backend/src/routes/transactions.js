@@ -100,6 +100,9 @@ router.post("/", requireAuth, async (req, res) => {
 });
 
 router.delete("/:id", requireAuth, async (req, res) => {
+  const tx = await Transaction.findById(req.params.id);
+  if (!tx) return res.status(404).json({ error: "transaction not found" });
+  if (tx.immutable) return res.status(403).json({ error: "cannot delete immutable transaction" });
   await Transaction.findByIdAndDelete(req.params.id);
   res.json({ ok: true });
 });
@@ -110,6 +113,7 @@ router.patch("/:id", requireAuth, async (req, res) => {
     const patch = Object.assign({}, req.body || {});
     const tx = await Transaction.findById(id);
     if (!tx) return res.status(404).json({ error: "transaction not found" });
+    if (tx.immutable) return res.status(403).json({ error: "cannot modify immutable transaction" });
     const userId = req.user && req.user.sub;
     if (String(tx.createdBy) !== String(userId))
       return res.status(403).json({ error: "forbidden" });

@@ -17,6 +17,7 @@ import errorHandler from "./middleware/errorHandler.js";
 import decryptDate from "./middleware/decryptDate.js";
 import settingsRoute from "./routes/settings.js";
 import manualCommitRoute from "./routes/manualCommit.js";
+import perplexityRoute from "./routes/perplexity.js";
 import authGithubRoutes from "./routes/authGithub.js";
 import usersRoutes from "./routes/users.js";
 
@@ -120,6 +121,7 @@ app.use("/api/users", usersRoutes);
 app.use("/api/settings", settingsRoute);
 app.use("/api/commit", manualCommitRoute);
 app.use("/auth/github", authGithubRoutes);
+app.use("/api/perplexity", perplexityRoute);
 
 app.use(errorHandler);
 

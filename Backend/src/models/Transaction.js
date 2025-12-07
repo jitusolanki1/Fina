@@ -15,6 +15,7 @@ const TransactionSchema = new mongoose.Schema({
   otherWithdrawal: { type: Number, default: 0 },
   upLineWithdrawal: { type: Number, default: 0 },
   rolled: { type: Boolean, default: false },
+  immutable: { type: Boolean, default: false },
   summaryRange: { type: String },
 }, { timestamps: true });
 

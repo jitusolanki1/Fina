@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AccountList from "../components/account/AccountList";
-import AccountDetail from "../components/account/AccountDetail";
 
 const STORAGE_KEY = "fina-sheets";
 
 export default function AccountsPage() {
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [detailAccount, setDetailAccount] = useState(null);
   const [sheets, setSheets] = useState([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingSheet, setEditingSheet] = useState(null);
@@ -31,13 +27,6 @@ export default function AccountsPage() {
     }
   }
 
-  function handleNew(template = null) {
-    setEditingSheet(
-      template ? { data: template.data, name: template.name } : null
-    );
-    setEditorOpen(true);
-  }
-
   function handleOpen(sheet) {
     setEditingSheet(sheet);
     setEditorOpen(true);
@@ -47,21 +36,6 @@ export default function AccountsPage() {
     if (!confirm("Delete this sheet?")) return;
     const remaining = sheets.filter((s) => s.id !== id);
     persist(remaining);
-  }
-
-  function handleSave(payload) {
-    const id = editingSheet?.id || `sheet_${Date.now()}`;
-    const item = {
-      id,
-      name: payload.name,
-      data: payload.data,
-      createdAt: payload.createdAt || new Date().toISOString(),
-    };
-    const existing = sheets.filter((s) => s.id !== id);
-    const next = [item, ...existing];
-    persist(next);
-    setEditorOpen(false);
-    setEditingSheet(item);
   }
 
   const templates = [
@@ -102,21 +76,21 @@ export default function AccountsPage() {
       case "blank":
         navigate("/account/blank/new");
         break;
-      // case 'todo':
-      // navigate('/account/todo/new');
-      // break;
-      // case 'annual':
-      // navigate('/account/annual/new');
-      // break;
-      // case 'monthly':
-      // navigate('/account/monthly/new');
-      // break;
-      // case 'finance':
-      // navigate('/account/finance/new');
-      // break;
-      // case 'calendar':
-      // navigate('/account/calendar/new');
-      // break;
+      case "todo":
+        navigate("/account/todo/new");
+        break;
+      case "annual":
+        navigate("/account/budget-annual/new");
+        break;
+      case "monthly":
+        navigate("/account/budget-monthly/new");
+        break;
+      case "finance":
+        navigate("/account/google-finance/new");
+        break;
+      case "calendar":
+        navigate("/account/calendar-annual/new");
+        break;
 
       default:
         alert(
