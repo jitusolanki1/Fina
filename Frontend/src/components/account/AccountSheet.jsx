@@ -184,7 +184,7 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
         </div>
 
         {/* Aggregate breakdown panel (moved to top) */}
-        <div className="p-3 mb-4 rounded border">
+        <div className="p-3 mb-4 rounded ">
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm text-slate-400">Aggregated breakdown</div>
             <div className="text-xs text-slate-500">Grouped by name/description</div>

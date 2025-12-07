@@ -97,6 +97,34 @@ export default function AccountsPage() {
     },
   ];
 
+  const handleTemplateClick = (templateId) => {
+    switch (templateId) {
+      case "blank":
+        navigate("/account/blank/new");
+        break;
+      // case 'todo':
+      // navigate('/account/todo/new');
+      // break;
+      // case 'annual':
+      // navigate('/account/annual/new');
+      // break;
+      // case 'monthly':
+      // navigate('/account/monthly/new');
+      // break;
+      // case 'finance':
+      // navigate('/account/finance/new');
+      // break;
+      // case 'calendar':
+      // navigate('/account/calendar/new');
+      // break;
+
+      default:
+        alert(
+          "Feature coming soon! In the meantime, create a blank Account and customize it to your needs."
+        );
+    }
+  };
+
   return (
     <div data-tour="accounts" className="space-y-6 settings-card">
       {/* Template gallery */}
@@ -113,7 +141,7 @@ export default function AccountsPage() {
               <div
                 className="w-full h-28 border rounded bg-white flex items-center justify-center bg-slate-200"
                 style={{ boxShadow: "0 0 0 1px rgba(0,0,0,0.04) inset" }}
-                  onClick={() => {alert("Feature coming soon! In the meantime, create a blank Account and customize it to your needs.")}}
+                onClick={() => handleTemplateClick(t.id)}
               >
                 {t.img ? (
                   <img
@@ -184,38 +212,6 @@ export default function AccountsPage() {
           </div>
         )}
       </div>
-
-      {/* Keep account list below (original content) */}
-      <div>
-        <AccountList
-          onOpen={(a) => {
-            navigate(`/account/${a.id}`);
-          }}
-        />
-      </div>
-
-      {editorOpen && (
-        <div className="fixed inset-0 z-40 flex items-start justify-center p-6">
-          <div className="w-full max-w-6xl">
-            <ExcelSheet
-              initialData={editingSheet?.data}
-              sheetName={editingSheet?.name}
-              onClose={() => setEditorOpen(false)}
-              onSave={handleSave}
-            />
-          </div>
-        </div>
-      )}
-
-      {detailOpen && (
-        <AccountDetail
-          account={detailAccount}
-          onClose={() => setDetailOpen(false)}
-          onSaved={(acc) => {
-            setDetailOpen(false);
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -28,6 +28,7 @@ function Summaries() {
   const [previewStart, setPreviewStart] = useState(dateDaysAgo(0));
   const [previewEnd, setPreviewEnd] = useState(dateDaysAgo(0));
   const [previewData, setPreviewData] = useState(null);
+  const [previewMode, setPreviewMode] = useState(null); // 'ciw' or null
 
   useEffect(() => {
     load();
@@ -58,7 +59,7 @@ function Summaries() {
     }
   }
 
-  // ⭐ FIXED — transactions now counted properly
+  // Preview
   async function computePreview(start, end) {
     try {
       setPreviewData(null);
@@ -132,6 +133,26 @@ function Summaries() {
 
             <button onClick={createDaily} className="control-btn">
               Create Daily Summary
+            </button>
+
+            <button
+              onClick={async () => {
+                // open preview modal for today and mark mode as CIW so commit will call CIW endpoint
+                const today = dateDaysAgo(0);
+                setPreviewStart(today);
+                setPreviewEnd(today);
+                setPreviewData(null);
+                setPreviewMode("ciw");
+                setPreviewOpen(true);
+                try {
+                  await computePreview(today, today);
+                } catch (err) {
+                  /* ignore */
+                }
+              }}
+              className="control-btn"
+            >
+              Run CIW Summary (Archive today)
             </button>
 
             <button
@@ -269,7 +290,6 @@ function Summaries() {
                     : idx % 3 === 1
                     ? "Done"
                     : "In Review";
-
                 const statusColor = status === "Done" ? "#16a34a" : "#f59e0b";
 
                 return (
@@ -339,6 +359,28 @@ function Summaries() {
                               return toast.error("Cannot undo local summary");
 
                             try {
+                              // prefer server-side atomic undo
+                              const resp = await toast.promise(
+                                fetch("/api/commit/undo", {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                  },
+                                  body: JSON.stringify({ summaryId: s.id }),
+                                }),
+                                {
+                                  loading: "Reverting summary...",
+                                  success: "Summary reverted",
+                                  error: "Failed to revert",
+                                }
+                              );
+
+                              if (resp && resp.ok) {
+                                setTimeout(load, 800);
+                                return;
+                              }
+
+                              // fallback to client-side undo if server doesn't support
                               await toast.promise(undoSummary(s.id), {
                                 loading: "Reverting summary...",
                                 success: "Summary reverted",
@@ -496,6 +538,7 @@ function Summaries() {
                       )}
                   </div>
                 )}
+
                 <SummaryDetail summary={previewData} />
 
                 <div className="flex gap-2 justify-end mt-4">
@@ -508,40 +551,78 @@ function Summaries() {
 
                   <button
                     onClick={async () => {
-                      if (!previewData || !previewData.txCount) {
+                      if (!previewData || !previewData.txCount)
                         return toast.error(
                           "No transactions matched — compute preview first."
                         );
-                      }
-                      try {
-                        const saved = await toast.promise(
-                          createSummaryRange(previewStart, previewEnd),
-                          {
-                            loading: "Creating summary...",
-                            success: "Summary created",
-                            error: "Failed",
-                          }
-                        );
 
-                        try {
-                          await toast.promise(
-                            sendSummaryViaFormspree(
-                              saved,
-                              "https://formspree.io/f/mdkqzwqg"
-                            ),
+                      try {
+                        if (previewMode === "ciw") {
+                          const resp = await toast.promise(
+                            fetch("/api/commit/ciw", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                            }),
                             {
-                              loading: "Sending summary...",
-                              success: "Summary sent",
-                              error: "Failed to send",
+                              loading: "Running CIW summary...",
+                              success: "CIW summary completed",
+                              error: "CIW summary failed",
                             }
                           );
-                        } catch (err) {
-                          console.error("send failed", err);
-                          toast.error("Could not send summary");
-                        }
 
-                        setPreviewOpen(false);
-                        setTimeout(load, 800);
+                          if (resp && resp.ok) {
+                            try {
+                              const json = await resp.json();
+                              if (json && json.summary) {
+                                try {
+                                  await toast.promise(
+                                    sendSummaryViaFormspree(
+                                      json.summary,
+                                      "https://formspree.io/f/mdkqzwqg"
+                                    ),
+                                    {
+                                      loading: "Sending summary...",
+                                      success: "Summary sent",
+                                      error: "Failed to send",
+                                    }
+                                  );
+                                } catch (err) {}
+                              }
+                            } catch (err) {
+                              /* ignore parse */
+                            }
+                          }
+
+                          setPreviewOpen(false);
+                          setPreviewMode(null);
+                          setTimeout(load, 800);
+                        } else {
+                          const saved = await toast.promise(
+                            createSummaryRange(previewStart, previewEnd),
+                            {
+                              loading: "Creating summary...",
+                              success: "Summary created",
+                              error: "Failed",
+                            }
+                          );
+
+                          try {
+                            await toast.promise(
+                              sendSummaryViaFormspree(
+                                saved,
+                                "https://formspree.io/f/mdkqzwqg"
+                              ),
+                              {
+                                loading: "Sending summary...",
+                                success: "Summary sent",
+                                error: "Failed",
+                              }
+                            );
+                          } catch (err) {}
+
+                          setPreviewOpen(false);
+                          setTimeout(load, 800);
+                        }
                       } catch (err) {
                         console.error(err);
                       }

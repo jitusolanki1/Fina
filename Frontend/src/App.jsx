@@ -18,6 +18,7 @@ const AccountList = lazy(() => import("./components/account/AccountList"));
 const AccountSheet = lazy(() => import("./components/account/AccountSheet"));
 const AccountForm = lazy(() => import("./components/account/AccountForm"));
 const AccountDetail = lazy(() => import("./components/account/AccountDetail"));
+const Accountblank = lazy(() => import("./components/account/Accountblank"));
 const SettingsPage = lazy(() => import("./pages/Settings"));
 const SummariesPage = lazy(() => import("./pages/Summaries"));
 const LoginPage = lazy(() => import("./components/auth/Login"));
@@ -108,6 +109,14 @@ function AppRoutes({
           element={
             <ProtectedRoute>
               <AccountPage />
+            </ProtectedRoute>
+          }
+        />
+         <Route
+          path="/account/blank/new"
+          element={
+            <ProtectedRoute>
+              <Accountblank />
             </ProtectedRoute>
           }
         />
