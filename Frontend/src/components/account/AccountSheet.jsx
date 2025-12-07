@@ -90,6 +90,13 @@ export default function AccountSheet({ account, onClose, historyRange = null }) 
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: updateTransaction,
+    onSuccess: () => {
+      queryClient.invalidateQueries(txQueryKey);
+    },
+  });
+
   const hasOpeningTx = (rawTxs || []).some((t) => String(t.description || '').toLowerCase().includes('opening'));
 
   const openingRow = !hasOpeningTx ? (() => {
