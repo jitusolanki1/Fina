@@ -156,6 +156,42 @@ router.post("/ask", requireAuth, async (req, res) => {
     // Otherwise, forward to Perplexity's Answers/Quickstart endpoint
     // Perplexity API quickstart: POST https://api.perplexity.ai/answers with {query}
     const endpoint = 'https://api.perplexity.ai/answers';
+    // Attempt to provide richer context to Perplexity: if the query mentions an account name,
+    // fetch that account and a small set of recent transactions and prepend as context to the query.
+    let contextData = null;
+    try {
+      const accs = await Account.find({ createdBy: String(userId) }).lean();
+      // try to find an account name mentioned in the query
+      const escapeRegExp = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      let matchedAccountName = null;
+      for (const a of accs) {
+        try {
+          const re = new RegExp('\\b' + escapeRegExp(a.name) + '\\b', 'i');
+          if (re.test(q)) {
+            matchedAccountName = a.name;
+            break;
+          }
+        } catch (e) {}
+      }
+
+      if (matchedAccountName) {
+        const acc = (await Account.findOne({ createdBy: String(userId), name: matchedAccountName }).lean()) || (await Account.findOne({ createdBy: String(userId), name: new RegExp('^' + matchedAccountName + '$', 'i') }).lean());
+        if (acc) {
+          const txs = await Transaction.find({ accountId: acc._id }).sort({ date: -1 }).limit(40).lean();
+          // build a compact context string: opening balance, totals, and recent transactions (most recent first)
+          const totalDeposit = (txs || []).reduce((s, t) => s + Number(t.deposit || 0) + Number(t.otherDeposit || 0) + Number(t.upLineDeposit || 0), 0);
+          const totalWithdrawal = (txs || []).reduce((s, t) => s + Number(t.penalWithdrawal || 0) + Number(t.otherWithdrawal || 0) + Number(t.upLineWithdrawal || 0), 0);
+          const recentLines = (txs || []).slice(0, 20).map((t) => `${t.date || ''} | ${t.description || ''} | +${Number(t.deposit||0)+Number(t.otherDeposit||0)+Number(t.upLineDeposit||0)} | -${Number(t.penalWithdrawal||0)+Number(t.otherWithdrawal||0)+Number(t.upLineWithdrawal||0)}`);
+          const ctx = `Account Context: ${acc.name}\nOpeningBalance: ${Number(acc.openingBalance||0)}\nTotalRecentDeposit: ${totalDeposit}\nTotalRecentWithdrawal: ${totalWithdrawal}\nRecentTransactions:\n${recentLines.join('\n')}`;
+          contextData = { account: acc, recentTxCount: txs.length, recentTxs: txs.slice(0,20) };
+          // prepend context to the user's query to give Perplexity full context
+          q = ctx + "\n\nUser Query: " + q;
+        }
+      }
+    } catch (e) {
+      console.warn('perplexity: context build failed', e && e.message);
+    }
+
     const body = { query: q };
 
     let r;
@@ -258,7 +294,9 @@ router.post("/ask", requireAuth, async (req, res) => {
     }
 
     // return a structured payload: a short `text` for UI and the full `data` if needed
-    return res.json({ type: 'answer', text: replyText, data: json });
+    // return a structured payload: a short `text` for UI, the full Perplexity `data`,
+    // and any local `contextData` we attached so the frontend has the full account context too.
+    return res.json({ type: 'answer', text: replyText, data: json, contextData });
   } catch (err) {
     console.error('perplexity.ask error', err && err.message);
     res.status(500).json({ error: err && err.message || String(err) });
